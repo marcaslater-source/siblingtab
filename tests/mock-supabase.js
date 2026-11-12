@@ -4,7 +4,8 @@
 (function () {
   var KEY = 'mockdb';
   function load() { try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch (e) { return null; } }
-  var db = load() || { users: [], session: null, families: [], family_members: [], invites: [], expenses: [], expense_shares: [], settlements: [], files: {} };
+  var db = load() || { users: [], session: null, families: [], family_members: [], invites: [], expenses: [], expense_shares: [], settlements: [], profiles: [], files: {} };
+  db.profiles = db.profiles || [];
   function save() { localStorage.setItem(KEY, JSON.stringify(db)); }
   function uuid() { return crypto.randomUUID(); }
   function uid() { return db.session && db.session.user.id; }
@@ -20,12 +21,21 @@
     invites: function (r) { return isMember(r.family_id); },
     expenses: function (r) { return isMember(r.family_id); },
     expense_shares: function (r) { return isMember(r.family_id); },
-    settlements: function (r) { return isMember(r.family_id); }
+    settlements: function (r) { return isMember(r.family_id); },
+    profiles: function (r) { return sharesFamily(r.id); }
   };
+  function sharesFamily(other) {
+    if (other === uid()) return true;
+    return db.family_members.some(function (a) {
+      return a.user_id === uid() && db.family_members.some(function (b) { return b.family_id === a.family_id && b.user_id === other; });
+    });
+  }
 
   function Query(table) { this.t = table; this.filters = []; this.orders = []; this.op = 'select'; this.one = null; }
   Query.prototype.select = function (cols) { if (this.op === 'select') this.cols = cols; else this.returning = cols; return this; };
   Query.prototype.eq = function (k, v) { this.filters.push([k, v]); return this; };
+  Query.prototype.in = function (k, v) { this.filters.push([k, v, 'in']); return this; };
+  Query.prototype.upsert = function (row) { this.op = 'upsert'; this.row = row; return this; };
   Query.prototype.order = function (k, o) { this.orders.push([k, !o || o.ascending !== false]); return this; };
   Query.prototype.maybeSingle = function () { this.one = 'maybe'; return this; };
   Query.prototype.single = function () { this.one = 'single'; return this; };
@@ -33,10 +43,16 @@
   Query.prototype.update = function (row) { this.op = 'update'; this.row = row; return this; };
   Query.prototype.delete = function () { this.op = 'delete'; return this; };
   Query.prototype.then = function (res, rej) { return this.run().then(res, rej); };
-  Query.prototype.match = function (r) { return this.filters.every(function (f) { return r[f[0]] === f[1]; }); };
+  Query.prototype.match = function (r) { return this.filters.every(function (f) { return f[2] === 'in' ? f[1].indexOf(r[f[0]]) >= 0 : r[f[0]] === f[1]; }); };
   Query.prototype.run = function () {
     var self = this, t = this.t, rows = db[t];
     if (!uid()) return fail('not signed in');
+    if (this.op === 'upsert') {
+      if (this.row.id !== uid()) return fail('row-level security');
+      var ex = rows.find(function (r) { return r.id === self.row.id; });
+      if (ex) Object.assign(ex, this.row); else rows.push(Object.assign({}, this.row));
+      save(); return ok(null);
+    }
     if (this.op === 'insert') {
       var r = Object.assign({}, this.row);
       if (!isMember(r.family_id)) return fail('new row violates row-level security policy');
@@ -85,6 +101,22 @@
       if (!isMember(i.family_id)) db.family_members.push({ family_id: i.family_id, user_id: uid(), display_name: a.my_name.trim(), role: 'member', joined_at: new Date().toISOString() });
       return i.family_id;
     },
+    families_deleted_with_me: function () {
+      return db.families.filter(function (f) {
+        return isMember(f.id) && !db.family_members.some(function (m) { return m.family_id === f.id && m.user_id !== uid() && !m.left_at; });
+      }).map(function (f) { return f.id; });
+    },
+    delete_my_account: function () {
+      var me = uid(), gone = rpcs.families_deleted_with_me();
+      db.families = db.families.filter(function (f) { return gone.indexOf(f.id) < 0; });
+      ['family_members', 'expenses', 'expense_shares', 'settlements', 'invites'].forEach(function (t) {
+        db[t] = db[t].filter(function (r) { return gone.indexOf(r.family_id) < 0; });
+      });
+      db.family_members.forEach(function (m) { if (m.user_id === me) { m.display_name = 'Former member'; m.left_at = new Date().toISOString(); } });
+      db.profiles = db.profiles.filter(function (p) { return p.id !== me; });
+      db.users = db.users.filter(function (u) { return u.id !== me; });
+      return null;
+    },
     save_expense: function (a) {
       if (!isMember(a.p_family_id)) throw new Error('row-level security');
       var e;
@@ -120,7 +152,12 @@
           },
           signOut: function () { db.session = null; save(); emit('SIGNED_OUT'); return ok(null); },
           resetPasswordForEmail: function () { return ok({}); },
-          updateUser: function () { return ok({}); }
+          updateUser: function (a) {
+            var u = db.users.find(function (x) { return x.id === uid(); });
+            if (a.password) u.password = a.password;
+            if (a.email) u.pendingEmail = a.email;
+            save(); return ok({ user: db.session.user });
+          }
         },
         from: function (t) { return new Query(t); },
         rpc: function (name, args) {
@@ -128,18 +165,28 @@
           try { var r = rpcs[name](args); save(); return ok(r); } catch (e) { return fail(e.message); }
         },
         storage: {
-          from: function () {
+          from: function (bucket) {
+            function allowed(path) {
+              var top = path.split('/')[0];
+              return bucket === 'avatars' ? top === uid() : isMember(top);
+            }
+            function key(p) { return bucket + ':' + p; }
             return {
               upload: function (path, blob) {
-                if (!isMember(path.split('/')[0])) return fail('row-level security');
+                if (!allowed(path)) return fail('new row violates row-level security policy');
                 return new Promise(function (res) {
                   var fr = new FileReader();
-                  fr.onload = function () { db.files[path] = fr.result; save(); res({ data: { path: path }, error: null }); };
+                  fr.onload = function () { db.files[key(path)] = fr.result; save(); res({ data: { path: path }, error: null }); };
                   fr.readAsDataURL(blob);
                 });
               },
-              remove: function (paths) { paths.forEach(function (p) { delete db.files[p]; }); save(); return ok([]); },
-              createSignedUrl: function (p) { return db.files[p] ? ok({ signedUrl: db.files[p] }) : fail('not found'); }
+              list: function (prefix) {
+                return ok(Object.keys(db.files).filter(function (k) { return k.indexOf(key(prefix + '/')) === 0; })
+                  .map(function (k) { return { name: k.slice(key(prefix + '/').length) }; }));
+              },
+              remove: function (paths) { paths.forEach(function (p) { if (allowed(p)) delete db.files[key(p)]; }); save(); return ok([]); },
+              createSignedUrl: function (p) { return db.files[key(p)] ? ok({ signedUrl: db.files[key(p)] }) : fail('not found'); },
+              createSignedUrls: function (ps) { return ok(ps.map(function (p) { return { path: p, signedUrl: db.files[key(p)] || null }; })); }
             };
           }
         }

@@ -21,8 +21,13 @@ and export a spreadsheet for tax time.
 - `supabase/schema.sql` — the database: tables, Row Level Security rules, the app's server
   functions (`create_family`, `join_family`, `invite_info`, `save_expense`) and the private
   `receipts` storage bucket. Run once in the Supabase SQL Editor.
+- `supabase/migrations/` — later database changes, run once each, in order, after `schema.sql`.
+  `002_account_settings.sql` adds `profiles` + the private `avatars` bucket (`<user id>/…`,
+  visible to people who share a family), `family_members.left_at`, and `delete_my_account()`
+  (removes solo families, renames you to "Former member" elsewhere, deletes your login).
 - `tests/` — `logic.test.js` (run `node tests/logic.test.js`) and `mock-supabase.js`, an
-  in-browser fake of Supabase used to click through the app in Playwright.
+  in-browser fake of Supabase used to click through the app in Playwright
+  (`e2e-playwright.js`; serve `app/` on port 8765 first).
 
 ## Privacy model
 
@@ -36,5 +41,4 @@ and export a spreadsheet for tax time.
 
 ## Not in this version
 
-CRA tax-credit reports, caregiving task/workload tracking, in-app payments, account
-self-deletion (handle deletion requests in the Supabase dashboard for now), removing members.
+CRA tax-credit reports, caregiving task/workload tracking, in-app payments, removing members.

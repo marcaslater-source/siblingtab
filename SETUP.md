@@ -119,6 +119,15 @@ tap the **⋮** menu → **Add to Home screen** (or **Install app**).
 - **No confirmation email arrives**: check spam, then re-check Part 2. In Supabase,
   **Authentication** → **Users** shows whether the person signed up.
 - **You still see an old version after an update**: flush the Dynamic Cache (step 3.4), then reload.
-- **Someone asks for their data to be deleted**: tell Claude. Their expenses are shared with their
-  siblings' records, so it takes a couple of careful steps. (A self-serve "delete my account"
-  button is on the list for a later version.)
+- **Someone asks for their data to be deleted**: they can do it themselves on the **Account** page
+  (**Delete my account**). Their siblings keep the shared expense history, shown as "Former member".
+
+---
+
+## Database updates
+
+When an app update needs a database change, it comes as a file in `supabase/migrations/`.
+Run each one once, in order, the same way as step 1.3 (SQL Editor → New query → paste → Run,
+and confirm if Supabase warns about "destructive operations").
+
+- `002_account_settings.sql`: profile photos and "delete my account" (November 2026).

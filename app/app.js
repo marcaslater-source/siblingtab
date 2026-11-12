@@ -94,7 +94,8 @@
     session: null,
     recovering: false,     // came back from a "reset password" email
     families: null,        // [{family_id, display_name, role, families:{name}}]
-    fam: null              // data for the open family
+    fam: null,             // data for the open family
+    avatars: {}            // user id -> signed photo URL (or null for no photo)
   };
 
   function me() { return state.session && state.session.user; }
@@ -117,7 +118,7 @@
   async function loadFamily(fid) {
     var results = await Promise.all([
       sb.from('families').select('id, name').eq('id', fid).maybeSingle(),
-      sb.from('family_members').select('user_id, display_name, role, joined_at').eq('family_id', fid).order('joined_at'),
+      sb.from('family_members').select('user_id, display_name, role, joined_at, left_at').eq('family_id', fid).order('joined_at'),
       sb.from('expenses').select('*').eq('family_id', fid).order('spent_on', { ascending: false }).order('created_at', { ascending: false }),
       sb.from('expense_shares').select('expense_id, user_id, share_cents').eq('family_id', fid),
       sb.from('settlements').select('*').eq('family_id', fid).order('settled_on', { ascending: false }).order('created_at', { ascending: false })
@@ -129,12 +130,44 @@
       shares: must(results[3]), settlements: must(results[4])
     };
     lsSet('siblingtab.lastFamily', fid);
+    await loadAvatars(state.fam.members.map(function (m) { return m.user_id; }));
     return state.fam;
+  }
+
+  // Profile photos are private: fetch short-lived links for the people we can see.
+  async function loadAvatars(userIds) {
+    try {
+      var ids = userIds.filter(function (id, i) { return userIds.indexOf(id) === i; });
+      if (!ids.length) return;
+      var rows = must(await sb.from('profiles').select('id, avatar_path').in('id', ids));
+      ids.forEach(function (id) { state.avatars[id] = null; });
+      var withPhoto = rows.filter(function (r) { return r.avatar_path; });
+      if (!withPhoto.length) return;
+      var signed = must(await sb.storage.from('avatars').createSignedUrls(withPhoto.map(function (r) { return r.avatar_path; }), 3600));
+      withPhoto.forEach(function (r, i) { if (signed[i] && signed[i].signedUrl) state.avatars[r.id] = signed[i].signedUrl; });
+    } catch (e) { /* photos are optional; never block the app on them */ }
+  }
+
+  function initials(name) {
+    var parts = String(name || '?').replace(/\(you\)/, '').trim().split(/\s+/);
+    return ((parts[0] || '?')[0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+  }
+
+  // A round photo, or the person's initials if they haven't added one.
+  function avatar(uid, size, nameOverride) {
+    var url = state.avatars[uid];
+    var name = nameOverride || (state.fam ? nameOf(uid) : '');
+    var cls = 'avatar' + (size === 'lg' ? ' lg' : size === 'sm' ? ' sm' : '');
+    return url ? h('img', { class: cls, src: url, alt: '' })
+      : h('span', { class: cls + ' initials', 'aria-hidden': 'true' }, initials(name));
+  }
+  function activeMembers() {
+    return state.fam.members.filter(function (m) { return !m.left_at; });
   }
 
   function nameOf(uid) {
     var m = state.fam && state.fam.members.find(function (x) { return x.user_id === uid; });
-    if (!m) return 'Former member';
+    if (!m || m.left_at) return 'Former member';
     return m.user_id === me().id ? m.display_name + ' (you)' : m.display_name;
   }
 
@@ -149,11 +182,14 @@
     renderTopbar();
 
     if (state.recovering) return viewNewPassword();
+    if (parts[0] === 'resources') return viewResources();
 
     if (!me()) {
       if (parts[0] === 'join' && parts[1]) lsSet(PENDING_INVITE, parts[1]);
       return viewAuth(parts[0] === 'signup' ? 'signup' : parts[0] === 'reset' ? 'reset' : 'login');
     }
+
+    if (!(me().id in state.avatars)) loadAvatars([me().id]).then(renderTopbar);
 
     try {
       if (parts[0] === 'join' && parts[1]) return await viewJoin(parts[1]);
@@ -161,7 +197,7 @@
       if (pending) { lsSet(PENDING_INVITE, null); return go('#/join/' + pending); }
 
       if (parts[0] === 'new') return viewCreateFamily();
-      if (parts[0] === 'account') return viewAccount();
+      if (parts[0] === 'account') return await viewAccount();
 
       if (parts[0] === 'f' && parts[1]) {
         var fid = parts[1];
@@ -200,7 +236,8 @@
   function renderTopbar() {
     topRight.replaceChildren();
     if (me() && !state.recovering) {
-      append(topRight, h('a', { class: 'link', href: '#/account', title: 'Your account' }, 'Account'));
+      append(topRight, h('a', { class: 'link account-link', href: '#/account', title: 'Your account' },
+        avatar(me().id, 'sm', me().email), h('span', null, 'Account')));
     }
   }
 
@@ -253,8 +290,19 @@
       ? [h('a', { href: '#/signup' }, 'New here? Create an account'), h('a', { href: '#/reset' }, 'Forgot your password?')]
       : [h('a', { href: '#/login' }, 'Already have an account? Log in')];
 
-    render(h('section', { class: 'card narrow' },
-      h('h1', null, mode === 'signup' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Welcome back'),
+    // First-time visitors (and invited siblings) land here, so say what SiblingTab is.
+    var intro = mode === 'login' ? h('section', { class: 'intro narrow' },
+      h('h1', null, 'Share the costs of caring for Mom or Dad, without the awkward math.'),
+      h('ul', { class: 'perks' },
+        h('li', null, h('strong', null, 'Log every expense'), ' with a photo of the receipt.'),
+        h('li', null, h('strong', null, 'See who owes whom'), ', worked out fairly and to the cent.'),
+        h('li', null, h('strong', null, 'Export for tax time'), ' as a spreadsheet for your records.')),
+      h('p', { class: 'small links-row' },
+        h('a', { href: '#/resources' }, 'Free caregiver resources'),
+        h('a', { href: 'https://siblingtab.com', rel: 'noopener' }, 'Learn more about SiblingTab'))) : null;
+
+    render(intro, h('section', { class: 'card narrow' },
+      h('h1', null, mode === 'signup' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Log in'),
       pendingInvite ? h('p', { class: 'note' }, 'You’ve been invited to a family on SiblingTab. Log in or create an account to join.') : null,
       mode === 'signup' ? h('p', { class: 'muted' }, 'One account per person. Each sibling makes their own and joins the family with an invite link.') : null,
       form,
@@ -422,10 +470,14 @@
     }));
     var desc = h('input', { type: 'text', maxlength: '300', placeholder: 'e.g. Shoppers Drug Mart – Mom’s prescriptions',
       value: existing ? existing.description : '' });
-    var paidBy = h('select', null, f.members.map(function (m) {
+    // People you can pick: current members, plus anyone already on this expense.
+    var pickable = f.members.filter(function (m) {
+      return !m.left_at || (existing && (existing.paid_by === m.user_id || oldShares.indexOf(m.user_id) >= 0));
+    });
+    var paidBy = h('select', null, pickable.map(function (m) {
       return h('option', { value: m.user_id, selected: existing ? existing.paid_by === m.user_id : m.user_id === uid }, nameOf(m.user_id));
     }));
-    var shareBoxes = f.members.map(function (m) {
+    var shareBoxes = pickable.map(function (m) {
       var cb = h('input', { type: 'checkbox', value: m.user_id, checked: oldShares ? oldShares.indexOf(m.user_id) >= 0 : true });
       return { cb: cb, el: h('label', { class: 'check' }, cb, ' ', nameOf(m.user_id)) };
     });
@@ -561,15 +613,18 @@
       ? h('ul', { class: 'list' }, steps.map(function (s) {
         var involved = s.from === uid || s.to === uid;
         return h('li', { class: 'owe' },
+          h('span', { class: 'pair' }, avatar(s.from, 'sm'), avatar(s.to, 'sm')),
           h('div', { class: 'grow' }, h('strong', null, nameOf(s.from)), ' owes ', h('strong', null, nameOf(s.to))),
           h('span', { class: 'amt' }, L.formatCents(s.amount_cents)),
           involved ? h('button', { class: 'btn small', type: 'button', onclick: function () { settleForm(s); } }, 'Mark paid') : null);
       }))
       : h('div', { class: 'empty' }, h('p', null, '🎉 Everyone is square.'));
 
-    var perPerson = h('ul', { class: 'list' }, f.members.map(function (m) {
+    // Former members only appear here if money is still owed to or by them.
+    var shown = f.members.filter(function (m) { return !m.left_at || (net[m.user_id] || 0) !== 0; });
+    var perPerson = h('ul', { class: 'list' }, shown.map(function (m) {
       var v = net[m.user_id] || 0;
-      return h('li', null, h('div', { class: 'grow' }, nameOf(m.user_id)),
+      return h('li', null, avatar(m.user_id), h('div', { class: 'grow' }, nameOf(m.user_id)),
         h('span', { class: 'amt ' + (v > 0 ? 'pos' : v < 0 ? 'neg' : '') },
           v > 0 ? 'is owed ' + L.formatCents(v) : v < 0 ? 'owes ' + L.formatCents(-v) : 'square'));
     }));
@@ -661,10 +716,16 @@
     render(famHeader('family'),
       h('section', { class: 'card' },
         h('h2', null, 'Members'),
-        h('ul', { class: 'list' }, f.members.map(function (m) {
-          return h('li', null, h('div', { class: 'grow' }, nameOf(m.user_id)),
+        h('ul', { class: 'list' }, activeMembers().map(function (m) {
+          return h('li', null, avatar(m.user_id), h('div', { class: 'grow' }, nameOf(m.user_id)),
             h('small', { class: 'muted' }, m.role === 'owner' ? 'Started this space' : 'Joined ' + niceDate(m.joined_at.slice(0, 10))));
-        }))),
+        })),
+        f.members.length > activeMembers().length
+          ? h('p', { class: 'muted small' }, (f.members.length - activeMembers().length) === 1
+            ? '1 former member deleted their account. Their past expenses are kept for your totals.'
+            : (f.members.length - activeMembers().length) + ' former members deleted their accounts. Their past expenses are kept for your totals.')
+          : null,
+        h('p', { class: 'small' }, h('a', { href: '#/account' }, 'Change your photo, name or password'))),
       h('section', { class: 'card' },
         h('h2', null, 'Invite a sibling'),
         h('p', null, 'Each sibling uses their own account. Send them a link and they’ll be able to see and add expenses.'),
@@ -725,20 +786,202 @@
   // Account
   // ---------------------------------------------------------------------------
 
-  function viewAccount() {
-    var out = h('button', {
+  // Make a square, small JPEG from any photo the person picks.
+  // Free downloads (hosted on the main site) and official CRA pages. Open to everyone.
+  function viewResources() {
+    var SITE = 'https://siblingtab.com/';
+    var CRA = 'https://www.canada.ca/en/revenue-agency/services/';
+    function item(href, title, desc, download) {
+      return h('li', null,
+        h('a', { href: href, target: '_blank', rel: 'noopener' }, title),
+        download ? h('span', { class: 'muted small' }, ' (' + download + ')') : null,
+        h('br'), h('span', { class: 'muted small' }, desc));
+    }
+    render(h('section', { class: 'card narrow' },
+      h('p', null, h('a', { href: me() ? '#/' : '#/login' }, me() ? '‹ Back' : '‹ Back to log in')),
+      h('h1', null, 'Caregiver resources'),
+      h('p', { class: 'muted' }, 'Free guides for families sharing the cost of caring for a parent in Canada.'),
+      h('h2', null, 'Downloads'),
+      h('ul', { class: 'resource-list' },
+        item(SITE + 'downloads/caregiver-tax-credit-checklist.pdf', 'Caregiver tax credit checklist',
+          'Which credits you can claim for a parent, which sibling should claim them, and the receipts to keep.', 'PDF'),
+        item(SITE + 'downloads/sibling-care-cost-split.xlsx', 'Sibling care cost split spreadsheet',
+          'Track costs and caregiving hours by sibling, for anyone who prefers a spreadsheet.', 'Excel')),
+      h('h2', null, 'Official CRA pages'),
+      h('ul', { class: 'resource-list' },
+        item(CRA + 'tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/canada-caregiver-amount.html',
+          'Canada caregiver amount', 'Who qualifies and how much you can claim for a dependent parent.'),
+        item(CRA + 'tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/lines-33099-33199-eligible-medical-expenses-you-claim-on-your-tax-return.html',
+          'Medical expenses you can claim', 'Which costs count, including many paid for a parent.'),
+        item(CRA + 'tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html',
+          'Disability tax credit', 'A credit that can often be transferred to a supporting family member.')),
+      h('p', { class: 'muted small' }, 'This is general information, not tax advice. For your situation, check with the CRA or a tax professional.')));
+  }
+
+  async function prepareAvatar(file) {
+    var bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    var side = Math.min(bmp.width, bmp.height), out = 320;
+    var c = document.createElement('canvas');
+    c.width = out; c.height = out;
+    c.getContext('2d').drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, out, out);
+    var blob = await new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.85); });
+    if (!blob) throw new Error('Couldn’t read that photo. Try a JPG or PNG.');
+    return blob;
+  }
+
+  async function viewAccount() {
+    var user = me(), uid = user.id;
+    var memberships = await loadFamilies();
+    var profile = null;
+    try { profile = must(await sb.from('profiles').select('id, avatar_path').eq('id', uid).maybeSingle()); } catch (e) { /* not set up yet */ }
+    if (!(uid in state.avatars)) await loadAvatars([uid]);
+    var myName = memberships.length ? memberships[0].display_name : '';
+
+    // --- Photo ---
+    var photoBox = h('div', { class: 'photo-row' });
+    var photoInput = h('input', { type: 'file', accept: 'image/*', class: 'visually-hidden', id: 'photo-input' });
+    function drawPhoto() {
+      photoBox.replaceChildren(avatar(uid, 'lg', myName || user.email),
+        h('div', { class: 'actions' },
+          h('label', { class: 'btn', for: 'photo-input' }, state.avatars[uid] ? 'Change photo' : 'Add a photo'),
+          state.avatars[uid] ? h('button', { class: 'btn ghost', type: 'button', onclick: removePhoto }, 'Remove') : null),
+        photoInput);
+      renderTopbar();
+    }
+    async function savePhotoPath(path) {
+      must(await sb.from('profiles').upsert({ id: uid, avatar_path: path, updated_at: new Date().toISOString() }));
+      var old = profile && profile.avatar_path;
+      profile = { id: uid, avatar_path: path };
+      if (old && old !== path) await sb.storage.from('avatars').remove([old]);
+      delete state.avatars[uid];
+      await loadAvatars([uid]);
+      drawPhoto();
+    }
+    photoInput.addEventListener('change', async function () {
+      var file = photoInput.files && photoInput.files[0];
+      if (!file) return;
+      try {
+        toast('Uploading photo…');
+        var blob = await prepareAvatar(file);
+        var path = uid + '/' + crypto.randomUUID() + '.jpg';
+        must(await sb.storage.from('avatars').upload(path, blob, { contentType: 'image/jpeg', upsert: false }));
+        await savePhotoPath(path);
+        toast('Photo updated');
+      } catch (err) { toast(friendlyError(err), true); }
+      photoInput.value = '';
+    });
+    async function removePhoto() {
+      try { await savePhotoPath(null); toast('Photo removed'); } catch (err) { toast(friendlyError(err), true); }
+    }
+    drawPhoto();
+
+    // --- Name (used in all your family spaces) ---
+    var nameInput = h('input', { type: 'text', maxlength: '60', required: true, value: myName, autocomplete: 'name' });
+    var nameBtn = h('button', { class: 'btn', type: 'submit' }, 'Save');
+    var nameForm = memberships.length ? h('form', {
+      class: 'inline', onsubmit: async function (ev) {
+        ev.preventDefault(); busy(nameBtn, true, '…');
+        try {
+          must(await sb.from('family_members').update({ display_name: nameInput.value.trim() }).eq('user_id', uid));
+          myName = nameInput.value.trim(); state.fam = null;
+          toast('Name updated in all your family spaces');
+        } catch (err) { toast(friendlyError(err), true); } finally { busy(nameBtn, false); }
+      }
+    }, field('Your name', nameInput, 'This is how your siblings see you.'), nameBtn) : null;
+
+    // --- Email ---
+    var emailInput = h('input', { type: 'email', required: true, autocomplete: 'email', inputmode: 'email' });
+    var emailBtn = h('button', { class: 'btn', type: 'submit' }, 'Change email');
+    var emailForm = h('form', {
+      class: 'stack', onsubmit: async function (ev) {
+        ev.preventDefault();
+        var next = emailInput.value.trim();
+        if (next.toLowerCase() === String(user.email).toLowerCase()) return toast('That’s already your email.', true);
+        busy(emailBtn, true, 'Sending…');
+        try {
+          must(await sb.auth.updateUser({ email: next }, { emailRedirectTo: appUrl() }));
+          emailInput.value = '';
+          toast('Check your inbox: click the confirmation link we sent to finish the change.');
+        } catch (err) { toast(friendlyError(err), true); } finally { busy(emailBtn, false); }
+      }
+    }, field('New email address', emailInput, 'We’ll send a confirmation link. Your email won’t change until you click it.'), emailBtn);
+
+    // --- Password ---
+    var cur = h('input', { type: 'password', required: true, autocomplete: 'current-password' });
+    var pw1 = h('input', { type: 'password', required: true, minlength: '8', autocomplete: 'new-password' });
+    var pw2 = h('input', { type: 'password', required: true, minlength: '8', autocomplete: 'new-password' });
+    var pwBtn = h('button', { class: 'btn', type: 'submit' }, 'Change password');
+    var pwForm = h('form', {
+      class: 'stack', onsubmit: async function (ev) {
+        ev.preventDefault();
+        if (pw1.value !== pw2.value) return toast('The two new passwords don’t match.', true);
+        if (pw1.value === cur.value) return toast('Choose a password different from your current one.', true);
+        busy(pwBtn, true, 'Saving…');
+        try {
+          // Check the current password first, so someone using an unlocked phone can't change it.
+          var check = await sb.auth.signInWithPassword({ email: user.email, password: cur.value });
+          if (check.error) throw new Error('Your current password isn’t right.');
+          must(await sb.auth.updateUser({ password: pw1.value }));
+          cur.value = pw1.value = pw2.value = '';
+          toast('Password changed');
+        } catch (err) { toast(friendlyError(err), true); } finally { busy(pwBtn, false); }
+      }
+    }, field('Current password', cur), field('New password', pw1, 'At least 8 characters.'), field('New password again', pw2), pwBtn);
+
+    // --- Delete account ---
+    var confirmInput = h('input', { type: 'text', autocomplete: 'off', placeholder: 'DELETE' });
+    var delBtn = h('button', { class: 'btn danger', type: 'submit' }, 'Delete my account');
+    var delForm = h('form', {
+      class: 'stack', onsubmit: async function (ev) {
+        ev.preventDefault();
+        if (confirmInput.value.trim().toUpperCase() !== 'DELETE') return toast('Type DELETE to confirm.', true);
+        busy(delBtn, true, 'Deleting…');
+        try {
+          // Clear files first: photos and receipts can't be removed from inside the database.
+          var doomed = must(await sb.rpc('families_deleted_with_me')) || [];
+          for (var i = 0; i < doomed.length; i++) {
+            var fid = typeof doomed[i] === 'string' ? doomed[i] : Object.values(doomed[i])[0];
+            var files = must(await sb.storage.from('receipts').list(fid, { limit: 1000 }));
+            if (files.length) await sb.storage.from('receipts').remove(files.map(function (x) { return fid + '/' + x.name; }));
+          }
+          var mine = must(await sb.storage.from('avatars').list(uid, { limit: 100 }));
+          if (mine.length) await sb.storage.from('avatars').remove(mine.map(function (x) { return uid + '/' + x.name; }));
+          must(await sb.rpc('delete_my_account'));
+          lsSet('siblingtab.lastFamily', null);
+          state.avatars = {};
+          history.replaceState(null, '', location.pathname + '#/login');
+          await sb.auth.signOut({ scope: 'local' });
+          toast('Your account has been deleted.');
+        } catch (err) { toast(friendlyError(err), true); busy(delBtn, false); }
+      }
+    },
+      h('p', null, 'This permanently deletes your login, your photo, and any family space where you’re the only member, including its receipts.'),
+      h('p', null, 'In family spaces you share, your siblings keep the expense history so their totals stay right, but your name is replaced with “Former member”.'),
+      field('Type DELETE to confirm', confirmInput),
+      delBtn);
+
+    var logout = h('button', {
       class: 'btn', type: 'button', onclick: async function () {
         lsSet('siblingtab.lastFamily', null);
+        state.avatars = {};
         history.replaceState(null, '', location.pathname + '#/login');
         await sb.auth.signOut();   // the sign-out event shows the login screen
       }
     }, 'Log out');
-    render(h('section', { class: 'card narrow' },
-      h('h1', null, 'Your account'),
-      h('p', null, 'Logged in as ', h('strong', null, me().email)),
-      h('p', null, h('a', { class: 'btn', href: '#/families' }, 'My family spaces')),
-      out,
-      h('p', { class: 'muted small' }, 'Want your account and data deleted? Contact us through siblingtab.com and we’ll take care of it.')));
+
+    render(
+      h('section', { class: 'card' },
+        h('h1', null, 'Your account'),
+        photoBox,
+        nameForm,
+        h('p', { class: 'muted small' }, 'Logged in as ', h('strong', null, user.email)),
+        h('div', { class: 'actions' }, h('a', { class: 'btn', href: '#/families' }, 'My family spaces'), logout),
+        h('p', { class: 'small' }, h('a', { href: '#/resources' }, 'Free caregiver resources'))),
+      h('section', { class: 'card' }, h('h2', null, 'Change your password'), pwForm),
+      h('section', { class: 'card' }, h('h2', null, 'Change your email'), emailForm),
+      h('details', { class: 'card danger-zone' },
+        h('summary', null, 'Delete my account'),
+        delForm));
   }
 
   // ---------------------------------------------------------------------------

@@ -23,7 +23,13 @@ const SHOTS = process.argv[2];
   const step = s => console.log('✓', s);
 
   await page.goto(base);
-  await page.getByRole('heading', { name: 'Welcome back' }).waitFor(); await shot('login');
+  await page.getByRole('heading', { name: 'Log in', exact: true }).waitFor(); await shot('login');
+  await page.getByRole('link', { name: 'Free caregiver resources' }).click();
+  await page.getByRole('heading', { name: 'Caregiver resources' }).waitFor(); await shot('resources');
+  if (await page.locator('.resource-list a').count() !== 5) throw new Error('resources missing');
+  await page.getByRole('link', { name: '‹ Back to log in' }).click();
+  await page.getByRole('heading', { name: 'Log in', exact: true }).waitFor();
+  step('resources page opens without an account');
   await page.getByText('New here? Create an account').click(); await page.getByRole('heading', { name: 'Create your account' }).waitFor();
   await page.getByLabel('Email').fill('marc@example.com');
   await page.getByLabel('Password').fill('password123');
@@ -52,7 +58,7 @@ const SHOTS = process.argv[2];
 
   await page.getByRole('link', { name: 'Account' }).click();
   await page.getByRole('button', { name: 'Log out' }).click();
-  await page.getByRole('heading', { name: 'Welcome back' }).waitFor();
+  await page.getByRole('heading', { name: 'Log in', exact: true }).waitFor();
 
   // Sibling follows invite link
   await page.goto(link);
@@ -109,7 +115,7 @@ const SHOTS = process.argv[2];
   // Marc can see but not edit Julie's expense
   await page.getByRole('link', { name: 'Account' }).click();
   await page.getByRole('button', { name: 'Log out' }).click();
-  await page.getByRole('heading', { name: 'Welcome back' }).waitFor();
+  await page.getByRole('heading', { name: 'Log in', exact: true }).waitFor();
   await page.getByLabel('Email').fill('marc@example.com');
   await page.getByLabel('Password').fill('wrong');
   await page.getByRole('button', { name: 'Log in' }).click();
@@ -130,6 +136,63 @@ const SHOTS = process.argv[2];
   await page.getByText('Expense deleted').waitFor(); await page.getByRole('link', { name: '+ Add an expense' }).waitFor();
   if (await page.getByText('Hospital parking').count()) throw new Error('not deleted');
   step('edit and delete own expense');
+
+  // Account page: photo, name, password
+  await page.getByRole('link', { name: 'Account' }).click();
+  await page.getByRole('heading', { name: 'Your account' }).waitFor();
+  await page.locator('#photo-input').setInputFiles(require('path').join(__dirname, 'avatar.png'));
+  await page.getByText('Photo updated').waitFor();
+  await page.locator('.photo-row img.avatar').waitFor();
+  await page.locator('.topbar img.avatar').waitFor(); await shot('account');
+  step('profile photo uploaded, shows in top bar');
+  await page.getByLabel('Your name').fill('Marc S');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByText('Name updated').waitFor();
+  await page.getByLabel('Current password').fill('nope1234');
+  await page.getByLabel('New password').first().fill('newpass123');
+  await page.getByLabel('New password again').fill('newpass123');
+  await page.getByRole('button', { name: 'Change password' }).click();
+  await page.getByText('current password isn’t right').waitFor();
+  await page.getByLabel('Current password').fill('password123');
+  await page.getByRole('button', { name: 'Change password' }).click();
+  await page.getByText('Password changed').waitFor();
+  step('name changed; password change checks the current password');
+  await page.getByRole('link', { name: 'My family spaces' }).click();
+  await page.getByText('Mom’s care').first().click();
+  await page.getByRole('link', { name: 'Who owes' }).click();
+  await page.locator('li.owe').waitFor();
+  const owe3 = (await page.locator('li.owe').innerText()).replace(/\s+/g, ' ');
+  if (!owe3.includes('Marc S (you) owes Julie')) throw new Error('renamed owe wrong: ' + owe3);
+  if (await page.locator('li.owe img.avatar').count() < 1) throw new Error('no avatar on balances');
+  step('new name and photo show on Who owes');
+
+  // Julie deletes her account; Marc's records keep her as "Former member"
+  await page.getByRole('link', { name: 'Account' }).click();
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await page.getByRole('heading', { name: 'Log in', exact: true }).waitFor();
+  await page.getByLabel('Email').fill('julie@example.com');
+  await page.getByLabel('Password').fill('password456');
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await page.getByText('Shoppers – prescriptions').waitFor();
+  await page.getByRole('link', { name: 'Account' }).click();
+  await page.getByText('Delete my account').first().click();
+  await page.getByRole('button', { name: 'Delete my account' }).click();
+  await page.getByText('Type DELETE to confirm.').first().waitFor();
+  await page.getByLabel('Type DELETE to confirm').fill('delete'); await shot('delete-account');
+  await page.getByRole('button', { name: 'Delete my account' }).click();
+  await page.getByText('Your account has been deleted.').waitFor();
+  await page.getByRole('heading', { name: 'Log in', exact: true }).waitFor();
+  await page.getByLabel('Email').fill('marc@example.com');
+  await page.getByLabel('Password').fill('newpass123');
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await page.getByRole('link', { name: 'Who owes' }).click();
+  await page.locator('li.owe').waitFor(); await shot('former-member');
+  const owe4 = (await page.locator('li.owe').innerText()).replace(/\s+/g, ' ');
+  if (!owe4.includes('Former member')) throw new Error('former member wrong: ' + owe4);
+  await page.getByRole('link', { name: 'Expenses' }).click();
+  await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('heading', { name: 'Add an expense' }).waitFor();
+  if (await page.locator('fieldset .check input').count() !== 1) throw new Error('former member still pickable');
+  step('deleted account shows as Former member, cannot be picked for new expenses');
 
   await page.setViewportSize({ width: 1280, height: 900 }); await page.goto(base + '#/f/x'); await page.waitForTimeout(300); await shot('bad-family');
   console.log(errors.length ? 'PAGE ERRORS:\n' + errors.join('\n') : 'no page errors');

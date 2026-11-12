@@ -116,3 +116,27 @@ form.inline .field { flex: 1; }
   .summary { grid-template-columns: 1fr; }
   .tabs a { font-size: .85rem; }
 }
+
+/* Profile photos */
+.avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--teal2); color: var(--teal-d); font-weight: 700; font-size: .85rem; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); }
+.avatar.sm { width: 26px; height: 26px; font-size: .7rem; border-width: 1px; }
+.avatar.lg { width: 88px; height: 88px; font-size: 1.8rem; }
+.pair { display: inline-flex; flex: none; }
+.pair .avatar + .avatar { margin-left: -8px; }
+.account-link { display: inline-flex; align-items: center; gap: 8px; }
+.photo-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.photo-row .actions { margin: 0; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+.danger-zone summary { cursor: pointer; font-weight: 600; color: var(--coral-d); }
+.danger-zone[open] summary { margin-bottom: 14px; }
+@media (max-width: 380px) { .account-link span { display: none; } }
+
+/* Welcome above the login form */
+.intro { padding: 8px 4px 4px; }
+.intro h1 { font-size: 1.45rem; }
+.perks { list-style: none; padding: 0; margin: 0 0 .8em; }
+.perks li { position: relative; padding-left: 26px; margin-bottom: .45em; }
+.perks li::before { content: ""; position: absolute; left: 4px; top: .5em; width: 10px; height: 10px; border-radius: 50%; background: var(--coral); }
+.links-row a { margin-right: 16px; display: inline-block; }
+.resource-list { padding-left: 1.1em; margin: 0 0 1.2em; }
+.resource-list li { margin-bottom: .8em; }
