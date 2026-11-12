@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SiblingTab</title>
+<meta name="description" content="Share and track the costs of caring for a parent with your siblings.">
+<meta name="theme-color" content="#1f5c57">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+<header class="topbar">
+  <a class="logo" href="#/"><i></i>SiblingTab</a>
+  <div id="topbar-right"></div>
+</header>
+<main id="app" aria-live="polite"><p class="muted center pad">Loading…</p></main>
+<div id="toast" role="status" hidden></div>
+<script src="config.js?v=1"></script>
+<script src="vendor/supabase-2.118.0.js"></script>
+<script src="logic.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>
