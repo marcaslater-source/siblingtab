@@ -65,7 +65,8 @@ create policy "edit own profile" on public.profiles
 
 revoke all on public.profiles from anon, authenticated;
 grant select, insert on public.profiles to authenticated;
-grant update (avatar_path, updated_at) on public.profiles to authenticated;
+-- id is included because the app saves with an upsert; the policy still limits it to your own row.
+grant update (id, avatar_path, updated_at) on public.profiles to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 3. Profile photo storage: private bucket, files under "<user id>/...".

@@ -131,3 +131,4 @@ Run each one once, in order, the same way as step 1.3 (SQL Editor → New query 
 and confirm if Supabase warns about "destructive operations").
 
 - `002_account_settings.sql`: profile photos and "delete my account" (November 2026).
+- `003_fix_profile_photo.sql`: fixes saving a profile photo (November 2026).
