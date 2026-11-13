@@ -174,6 +174,14 @@ const SHOTS = process.argv[2];
   if (await page.locator('li.owe img.avatar').count() < 1) throw new Error('no avatar on balances');
   step('new name and photo show on Who owes');
 
+  // Owner-only stats page
+  await page.getByRole('link', { name: 'Account' }).click();
+  await page.getByRole('link', { name: 'App stats (only you see this)' }).click();
+  await page.getByRole('heading', { name: 'App stats' }).waitFor(); await shot('stats');
+  const st = (await page.locator('main').innerText()).replace(/\s+/g, ' ');
+  if (!st.includes('Accounts 2') || !st.includes('With a receipt photo 1')) throw new Error('stats wrong: ' + st);
+  step('owner sees app stats');
+
   // Julie deletes her account; Marc's records keep her as "Former member"
   await page.getByRole('link', { name: 'Account' }).click();
   await page.getByRole('button', { name: 'Log out' }).click();
@@ -183,6 +191,11 @@ const SHOTS = process.argv[2];
   await page.getByRole('button', { name: 'Log in' }).click();
   await page.getByText('Shoppers – prescriptions').waitFor();
   await page.getByRole('link', { name: 'Account' }).click();
+  await page.getByRole('heading', { name: 'Your account' }).waitFor(); await page.waitForTimeout(300);
+  if (await page.getByRole('link', { name: /App stats/ }).isVisible()) throw new Error('non-owner sees stats link');
+  await page.goto(base + '#/stats'); await page.getByRole('heading', { name: 'Page not found' }).waitFor();
+  await page.goto(base + '#/account'); await page.getByRole('heading', { name: 'Your account' }).waitFor();
+  step('other siblings cannot see app stats');
   await page.getByText('Delete my account').first().click();
   await page.getByRole('button', { name: 'Delete my account' }).click();
   await page.getByText('Type DELETE to confirm.').first().waitFor();

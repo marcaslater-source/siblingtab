@@ -198,6 +198,7 @@
 
       if (parts[0] === 'new') return viewCreateFamily();
       if (parts[0] === 'account') return await viewAccount();
+      if (parts[0] === 'stats') return await viewStats();
 
       if (parts[0] === 'f' && parts[1]) {
         var fid = parts[1];
@@ -839,6 +840,62 @@
         h('p', { class: 'muted small' }, 'This is a way to organize your records, not tax advice. Confirm your claims with the CRA or a tax professional.')));
   }
 
+  // Owner-only usage counts, straight from the database. No names, emails or family details.
+  async function viewStats() {
+    var res = await sb.rpc('owner_stats');
+    if (res.error) {
+      return render(h('section', { class: 'card narrow' }, h('h1', null, 'Page not found'),
+        h('p', null, h('a', { href: '#/' }, '‹ Back'))));
+    }
+    var d = res.data || {};
+    var A = d.accounts || {}, F = d.families || {}, M = d.members || {}, E = d.expenses || {}, P = d.paybacks || {};
+    var pct = function (a, b) { return b ? Math.round(100 * a / b) + '%' : '–'; };
+    function tile(label, value, sub) {
+      return h('div', { class: 'stat' }, h('span', { class: 'stat-label' }, label), h('strong', null, String(value)),
+        sub ? h('span', { class: 'muted small' }, sub) : null);
+    }
+    var weekly = d.weekly || [];
+    var maxExp = Math.max.apply(null, [1].concat(weekly.map(function (w) { return w.expenses; })));
+    render(
+      h('p', null, h('a', { href: '#/account' }, '‹ Back')),
+      h('section', { class: 'card' },
+        h('h1', null, 'App stats'),
+        h('p', { class: 'muted small' }, 'Only you can see this page. Totals across all families, as of ' +
+          new Date(d.generated_at || Date.now()).toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' })),
+        h('h2', null, 'People'),
+        h('div', { class: 'stats' },
+          tile('Accounts', A.total, A.confirmed + ' confirmed their email'),
+          tile('New accounts', A.new_7d, 'last 7 days · ' + A.new_30d + ' in 30'),
+          tile('Logged in', A.signed_in_7d, 'last 7 days · ' + A.signed_in_30d + ' in 30'),
+          tile('Added something', d.people_adding_7d, 'last 7 days · ' + d.people_adding_30d + ' in 30'),
+          tile('No family yet', A.no_family, 'signed up but not in a family')),
+        h('h2', null, 'Families'),
+        h('div', { class: 'stats' },
+          tile('Family spaces', F.total, 'avg ' + (F.avg_members == null ? '–' : F.avg_members) + ' members'),
+          tile('With 2+ siblings', F.with_2_plus, pct(F.with_2_plus, F.total) + ' of families'),
+          tile('Active families', F.active_7d, 'logged an expense in 7 days · ' + F.active_30d + ' in 30'),
+          tile('Former members', M.former, M.active + ' current members')),
+        h('h2', null, 'Expenses'),
+        h('div', { class: 'stats' },
+          tile('Expenses logged', E.total, E.new_7d + ' in 7 days · ' + E.new_30d + ' in 30'),
+          tile('With a receipt photo', E.with_receipt, pct(E.with_receipt, E.total) + ' of expenses'),
+          tile('Total tracked', L.formatCents(E.total_cents || 0), 'across all families'),
+          tile('Paybacks recorded', P.total, P.new_30d + ' in 30 days'))),
+      h('section', { class: 'card' },
+        h('h2', null, 'Last 8 weeks'),
+        h('table', { class: 'stats-table' },
+          h('thead', null, h('tr', null, h('th', null, 'Week of'), h('th', null, 'New accounts'), h('th', null, 'New families'), h('th', null, 'Expenses'))),
+          h('tbody', null, weekly.map(function (w) {
+            return h('tr', null,
+              h('td', null, niceDate(w.week)),
+              h('td', null, String(w.accounts)),
+              h('td', null, String(w.families)),
+              h('td', null, h('span', { class: 'bar-cell' },
+                h('span', { class: 'bar', style: 'width:' + Math.round(100 * w.expenses / maxExp) + '%' }),
+                h('span', null, String(w.expenses)))));
+          })))));
+  }
+
   // ---------------------------------------------------------------------------
   // Account
   // ---------------------------------------------------------------------------
@@ -1019,6 +1076,10 @@
       field('Type DELETE to confirm', confirmInput),
       delBtn);
 
+    // Only the app's owner sees the stats link (the database decides who that is).
+    var ownerLink = h('p', { class: 'small', hidden: true }, h('a', { href: '#/stats' }, 'App stats (only you see this)'));
+    sb.rpc('is_app_owner').then(function (r) { if (r && r.data === true) ownerLink.hidden = false; }, function () {});
+
     var logout = h('button', {
       class: 'btn', type: 'button', onclick: async function () {
         lsSet('siblingtab.lastFamily', null);
@@ -1036,6 +1097,7 @@
         h('p', { class: 'muted small' }, 'Logged in as ', h('strong', null, user.email)),
         h('div', { class: 'actions' }, h('a', { class: 'btn', href: '#/families' }, 'My family spaces'), logout),
         h('p', { class: 'small' }, h('a', { href: '#/resources' }, 'Free caregiver resources')),
+        ownerLink,
         legalLinks()),
       h('section', { class: 'card' }, h('h2', null, 'Change your password'), pwForm),
       h('section', { class: 'card' }, h('h2', null, 'Change your email'), emailForm),

@@ -101,6 +101,22 @@
       if (!isMember(i.family_id)) db.family_members.push({ family_id: i.family_id, user_id: uid(), display_name: a.my_name.trim(), role: 'member', joined_at: new Date().toISOString() });
       return i.family_id;
     },
+    // The mock treats marc@example.com as the app owner.
+    is_app_owner: function () { var u = db.users.find(function (x) { return x.id === uid(); }); return !!u && u.email === 'marc@example.com'; },
+    owner_stats: function () {
+      if (!rpcs.is_app_owner()) throw new Error('Not allowed');
+      var active = db.family_members.filter(function (m) { return !m.left_at; });
+      return { generated_at: new Date().toISOString(),
+        accounts: { total: db.users.length, confirmed: db.users.length, new_7d: db.users.length, new_30d: db.users.length, signed_in_7d: 1, signed_in_30d: 1,
+          no_family: db.users.filter(function (u) { return !active.some(function (m) { return m.user_id === u.id; }); }).length },
+        families: { total: db.families.length, with_2_plus: 1, avg_members: 2.0, active_7d: 1, active_30d: 1 },
+        members: { active: active.length, former: db.family_members.length - active.length },
+        expenses: { total: db.expenses.length, with_receipt: db.expenses.filter(function (e) { return e.receipt_path; }).length,
+          new_7d: db.expenses.length, new_30d: db.expenses.length, total_cents: db.expenses.reduce(function (a, e) { return a + e.amount_cents; }, 0) },
+        paybacks: { total: db.settlements.length, new_30d: db.settlements.length },
+        people_adding_7d: 2, people_adding_30d: 2,
+        weekly: [{ week: '2026-11-02', accounts: 0, families: 0, expenses: 0 }, { week: '2026-11-09', accounts: db.users.length, families: db.families.length, expenses: db.expenses.length }] };
+    },
     families_deleted_with_me: function () {
       return db.families.filter(function (f) {
         return isMember(f.id) && !db.family_members.some(function (m) { return m.family_id === f.id && m.user_id !== uid() && !m.left_at; });

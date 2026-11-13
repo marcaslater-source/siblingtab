@@ -132,3 +132,4 @@ and confirm if Supabase warns about "destructive operations").
 
 - `002_account_settings.sql`: profile photos and "delete my account" (November 2026).
 - `003_fix_profile_photo.sql`: fixes saving a profile photo (November 2026).
+- `004_owner_stats.sql`: the private App stats page (November 2026). After running it, add yourself as the owner with the line at the top of the file.
