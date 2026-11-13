@@ -1,0 +1,37 @@
+# Publishes the landing page and the app to SiteGround whenever you push to main.
+# Needs 5 GitHub "secrets" (see GUIDE.md). Nothing secret is stored in this file.
+name: Deploy to SiteGround
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SG_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p ${{ secrets.SG_PORT }} ${{ secrets.SG_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Publish landing page (siblingtab.com)
+        run: |
+          rsync -az -e "ssh -i ~/.ssh/id_deploy -p ${{ secrets.SG_PORT }}" \
+            --exclude 'downloads/*.zip' --exclude '*.zip' --exclude 'DEPLOY.md' \
+            landing-page/ ${{ secrets.SG_USER }}@${{ secrets.SG_HOST }}:${{ secrets.SG_LANDING_DIR }}/
+
+      - name: Publish app (app.siblingtab.com)
+        run: |
+          rsync -az -e "ssh -i ~/.ssh/id_deploy -p ${{ secrets.SG_PORT }}" \
+            app/ ${{ secrets.SG_USER }}@${{ secrets.SG_HOST }}:${{ secrets.SG_APP_DIR }}/
+
+      - name: Flush SiteGround cache (best effort)
+        continue-on-error: true
+        run: |
+          ssh -i ~/.ssh/id_deploy -p ${{ secrets.SG_PORT }} ${{ secrets.SG_USER }}@${{ secrets.SG_HOST }} \
+            "site-tools-client domain-all update id=1 flush_cache=1"

@@ -34,8 +34,20 @@ const SHOTS = process.argv[2];
   await page.getByLabel('Email').fill('marc@example.com');
   await page.getByLabel('Password').fill('password123');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await page.getByRole('heading', { name: 'Set up your family space' }).waitFor(); await shot('setup');
-  step('sign up');
+  await page.getByRole('heading', { name: 'Set up your family space' }).waitFor();
+  // First-run walkthrough: shows for a brand-new person, can be stepped through, and is skippable
+  await page.getByRole('heading', { name: 'Welcome to SiblingTab' }).waitFor(); await shot('tour-1');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('heading', { name: 'Add an expense' }).waitFor();
+  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('heading', { name: 'Welcome to SiblingTab' }).waitFor();
+  await page.getByRole('button', { name: 'Skip' }).click();
+  if (await page.locator('#tour').count() !== 0) throw new Error('tour should close on skip');
+  await page.reload(); await page.getByRole('heading', { name: 'Set up your family space' }).waitFor();
+  await page.waitForTimeout(300);
+  if (await page.locator('#tour').count() !== 0) throw new Error('tour came back after skip');
+  await shot('setup');
+  step('sign up; walkthrough shows once, skip is remembered');
   await page.getByLabel('Name for this family space').fill('Mom’s care');
   await page.getByLabel('Your name, as your siblings know you').fill('Marc');
   await page.getByRole('button', { name: 'Create family space' }).click();
@@ -70,8 +82,11 @@ const SHOTS = process.argv[2];
   await page.getByRole('heading', { name: 'Join “Mom’s care”' }).waitFor(); await shot('join');
   await page.getByLabel('Your name, as your siblings know you').fill('Julie');
   await page.getByRole('button', { name: 'Join family' }).click();
+  await page.getByRole('heading', { name: 'Welcome to Mom’s care’s space' }).waitFor(); await shot('tour-joined');
+  for (const label of ['Next', 'Next', 'Next', 'Got it']) await page.getByRole('button', { name: label, exact: true }).click();
+  if (await page.locator('#tour').count() !== 0) throw new Error('tour should close at the end');
   await page.getByText('Hospital parking').waitFor();
-  step('sibling signs up via invite and joins');
+  step('invited sibling sees the welcome walkthrough, finishes it');
 
   // Julie adds a pharmacy expense with a receipt, split between both
   await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('heading', { name: 'Add an expense' }).waitFor();
@@ -120,8 +135,16 @@ const SHOTS = process.argv[2];
   console.log('   CSV file:', dl.suggestedFilename()); console.log(csv.split('\r\n').map(l => '   ' + l).join('\n'));
   step('CSV export');
 
-  // Marc can see but not edit Julie's expense
+  // Replay the walkthrough from the Account page
   await page.getByRole('link', { name: 'Account' }).click();
+  await page.getByRole('button', { name: 'Show the quick tour again' }).click();
+  await page.getByRole('heading', { name: 'Welcome to SiblingTab' }).waitFor();
+  await page.keyboard.press('Escape');
+  if (await page.locator('#tour').count() !== 0) throw new Error('Escape should close the tour');
+  step('tour can be replayed from Account and closed with Escape');
+
+  // Marc can see but not edit Julie's expense
+
   await page.getByRole('button', { name: 'Log out' }).click();
   await page.getByRole('heading', { name: 'Log in', exact: true }).waitFor();
   await page.getByLabel('Email').fill('marc@example.com');
@@ -148,6 +171,20 @@ const SHOTS = process.argv[2];
   // Account page: photo, name, password
   await page.getByRole('link', { name: 'Account' }).click();
   await page.getByRole('heading', { name: 'Your account' }).waitFor();
+  // Monthly summary email switch: off by default, remembers being turned on and off
+  const sw = page.getByLabel('Email me a summary once a month');
+  if (await sw.isChecked()) throw new Error('monthly summary should default to off');
+  await sw.check();
+  await page.getByText('Monthly summary is on').waitFor();
+  await page.reload(); await page.getByRole('heading', { name: 'Your account' }).waitFor();
+  if (!(await page.getByLabel('Email me a summary once a month').isChecked())) throw new Error('monthly summary did not stick');
+  await page.getByLabel('Email me a summary once a month').uncheck();
+  await page.getByText('Monthly summary is off').waitFor();
+  step('monthly summary switch');
+  await page.goto(base + '#/unsubscribe/11111111-2222-3333-4444-555555555555');
+  await page.getByRole('heading', { name: 'You’re unsubscribed' }).waitFor();
+  step('unsubscribe link page');
+  await page.goto(base + '#/account'); await page.getByRole('heading', { name: 'Your account' }).waitFor();
   await page.locator('#photo-input').setInputFiles(require('path').join(__dirname, 'avatar.png'));
   await page.getByText('Photo updated').waitFor();
   await page.locator('.photo-row img.avatar').waitFor();

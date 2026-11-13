@@ -101,6 +101,9 @@
       if (!isMember(i.family_id)) db.family_members.push({ family_id: i.family_id, user_id: uid(), display_name: a.my_name.trim(), role: 'member', joined_at: new Date().toISOString() });
       return i.family_id;
     },
+    get_monthly_summary: function () { return !!(db.email_prefs && db.email_prefs[uid()]); },
+    set_monthly_summary: function (a) { db.email_prefs = db.email_prefs || {}; db.email_prefs[uid()] = !!a.enabled; return !!a.enabled; },
+    unsubscribe_by_token: function (a) { db.unsubscribed = (db.unsubscribed || []).concat([a.t]); return null; },
     // The mock treats marc@example.com as the app owner.
     is_app_owner: function () { var u = db.users.find(function (x) { return x.id === uid(); }); return !!u && u.email === 'marc@example.com'; },
     owner_stats: function () {
@@ -177,7 +180,7 @@
         },
         from: function (t) { return new Query(t); },
         rpc: function (name, args) {
-          if (!uid()) return fail('Not signed in');
+          if (!uid() && name !== 'unsubscribe_by_token') return fail('Not signed in');
           try { var r = rpcs[name](args); save(); return ok(r); } catch (e) { return fail(e.message); }
         },
         storage: {
