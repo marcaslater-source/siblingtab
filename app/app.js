@@ -245,6 +245,12 @@
   // Sign in / sign up / reset password
   // ---------------------------------------------------------------------------
 
+  var TERMS_URL = 'https://siblingtab.com/terms.html', PRIVACY_URL = 'https://siblingtab.com/privacy.html';
+  function ext(href, text) { return h('a', { href: href, target: '_blank', rel: 'noopener' }, text); }
+  function legalLinks() {
+    return h('p', { class: 'small links-row' }, ext(TERMS_URL, 'Terms of Use'), ext(PRIVACY_URL, 'Privacy Policy'));
+  }
+
   function viewAuth(mode) {
     var pendingInvite = lsGet(PENDING_INVITE);
     var email = h('input', { type: 'email', autocomplete: 'email', required: true, inputmode: 'email' });
@@ -306,6 +312,8 @@
       pendingInvite ? h('p', { class: 'note' }, 'You’ve been invited to a family on SiblingTab. Log in or create an account to join.') : null,
       mode === 'signup' ? h('p', { class: 'muted' }, 'One account per person. Each sibling makes their own and joins the family with an invite link.') : null,
       form,
+      mode === 'signup' ? h('p', { class: 'muted small' }, 'By creating an account you agree to the ',
+        ext(TERMS_URL, 'Terms of Use'), ' and ', ext(PRIVACY_URL, 'Privacy Policy'), '.') : null,
       h('p', { class: 'links' }, links),
       h('p', { class: 'muted small' }, 'Your family’s information is stored in Canada and only members of your family can see it.')));
   }
@@ -864,7 +872,8 @@
           'Medical expenses you can claim', 'Which costs count, including many paid for a parent.'),
         item(CRA + 'tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html',
           'Disability tax credit', 'A credit that can often be transferred to a supporting family member.')),
-      h('p', { class: 'muted small' }, 'This is general information, not tax advice. For your situation, check with the CRA or a tax professional.')));
+      h('p', { class: 'muted small' }, 'This is general information, not tax advice. For your situation, check with the CRA or a tax professional.'),
+      legalLinks()));
   }
 
   async function prepareAvatar(file) {
@@ -1006,6 +1015,7 @@
     },
       h('p', null, 'This permanently deletes your login, your photo, and any family space where you’re the only member, including its receipts.'),
       h('p', null, 'In family spaces you share, your siblings keep the expense history so their totals stay right, but your name is replaced with “Former member”.'),
+      h('p', { class: 'small' }, ext(PRIVACY_URL + '#keep', 'What we keep and for how long')),
       field('Type DELETE to confirm', confirmInput),
       delBtn);
 
@@ -1025,7 +1035,8 @@
         nameForm,
         h('p', { class: 'muted small' }, 'Logged in as ', h('strong', null, user.email)),
         h('div', { class: 'actions' }, h('a', { class: 'btn', href: '#/families' }, 'My family spaces'), logout),
-        h('p', { class: 'small' }, h('a', { href: '#/resources' }, 'Free caregiver resources'))),
+        h('p', { class: 'small' }, h('a', { href: '#/resources' }, 'Free caregiver resources')),
+        legalLinks()),
       h('section', { class: 'card' }, h('h2', null, 'Change your password'), pwForm),
       h('section', { class: 'card' }, h('h2', null, 'Change your email'), emailForm),
       h('details', { class: 'card danger-zone' },
