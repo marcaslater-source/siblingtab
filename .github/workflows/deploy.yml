@@ -2,6 +2,8 @@
 # Needs 5 GitHub "secrets" (see GUIDE.md). Nothing secret is stored in this file.
 name: Deploy to SiteGround
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
@@ -9,6 +11,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # On pull requests this is a rehearsal: it lists what WOULD change and changes nothing.
+      DRY: ${{ github.event_name == 'pull_request' && '--dry-run -i' || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -21,16 +26,17 @@ jobs:
 
       - name: Publish landing page (siblingtab.com)
         run: |
-          rsync -az -e "ssh -i ~/.ssh/id_deploy -p ${{ secrets.SG_PORT }}" \
+          rsync -az $DRY -e "ssh -i ~/.ssh/id_deploy -p ${{ secrets.SG_PORT }}" \
             --exclude 'downloads/*.zip' --exclude '*.zip' --exclude 'DEPLOY.md' \
             landing-page/ ${{ secrets.SG_USER }}@${{ secrets.SG_HOST }}:${{ secrets.SG_LANDING_DIR }}/
 
       - name: Publish app (app.siblingtab.com)
         run: |
-          rsync -az -e "ssh -i ~/.ssh/id_deploy -p ${{ secrets.SG_PORT }}" \
+          rsync -az $DRY -e "ssh -i ~/.ssh/id_deploy -p ${{ secrets.SG_PORT }}" \
             app/ ${{ secrets.SG_USER }}@${{ secrets.SG_HOST }}:${{ secrets.SG_APP_DIR }}/
 
       - name: Flush SiteGround cache (best effort)
+        if: github.event_name != 'pull_request'
         continue-on-error: true
         run: |
           ssh -i ~/.ssh/id_deploy -p ${{ secrets.SG_PORT }} ${{ secrets.SG_USER }}@${{ secrets.SG_HOST }} \
