@@ -296,7 +296,7 @@
       h('ul', { class: 'perks' },
         h('li', null, h('strong', null, 'Log every expense'), ' with a photo of the receipt.'),
         h('li', null, h('strong', null, 'See who owes whom'), ', worked out fairly and to the cent.'),
-        h('li', null, h('strong', null, 'Export for tax time'), ' as a spreadsheet for your records.')),
+        h('li', null, h('strong', null, 'Get ready for tax time'), ' with a summary of what each of you can likely claim.')),
       h('p', { class: 'small links-row' },
         h('a', { href: '#/resources' }, 'Free caregiver resources'),
         h('a', { href: 'https://siblingtab.com', rel: 'noopener' }, 'Learn more about SiblingTab'))) : null;
@@ -391,7 +391,7 @@
   // Header + tabs shown on every family screen.
   function famHeader(active) {
     var f = state.fam;
-    var tabs = [['expenses', 'Expenses'], ['balances', 'Who owes'], ['family', 'Family'], ['export', 'Export']];
+    var tabs = [['expenses', 'Expenses'], ['balances', 'Who owes'], ['family', 'Family'], ['export', 'Tax time']];
     return [
       h('div', { class: 'fam-head' },
         h('h1', null, f.name),
@@ -756,30 +756,79 @@
   // Export
   // ---------------------------------------------------------------------------
 
+  // Tax time: what each sibling paid in a year, sorted by how the CRA usually treats it, plus the spreadsheet.
   function viewExport() {
     var f = state.fam;
     var years = {};
     f.expenses.forEach(function (e) { years[e.spent_on.slice(0, 4)] = true; });
     f.settlements.forEach(function (p) { years[p.settled_on.slice(0, 4)] = true; });
     var yearList = Object.keys(years).sort().reverse();
-    var sel = h('select', null, h('option', { value: '' }, 'All years'),
-      yearList.map(function (y) { return h('option', { value: y, selected: y === yearList[0] }, y); }));
-    var btn = h('button', {
-      class: 'btn primary', type: 'button', onclick: function () {
-        var csv = L.buildCsv(f.members, f.expenses, f.shares, f.settlements, sel.value);
+    if (!yearList.length) {
+      return render(famHeader('export'), h('section', { class: 'card' },
+        h('h2', null, 'Tax time'),
+        h('p', { class: 'muted' }, 'Add some expenses first. This page then sorts what each of you paid into what the CRA usually allows, and gives you a spreadsheet.')));
+    }
+    var year = state.taxYear && years[state.taxYear] ? state.taxYear : yearList[0];
+    var sel = h('select', { onchange: function () { state.taxYear = sel.value; viewExport(); } },
+      yearList.map(function (y) { return h('option', { value: y, selected: y === year }, y); }));
+
+    var csvBtn = h('button', {
+      class: 'btn', type: 'button', onclick: function () {
+        var csv = L.buildCsv(f.members, f.expenses, f.shares, f.settlements, year);
         var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
         var a = h('a', { href: URL.createObjectURL(blob),
-          download: 'SiblingTab - ' + (f.name.replace(/[^A-Za-z0-9 _-]/g, '').trim() || 'family') + ' - ' + (sel.value || 'all years') + '.csv' });
+          download: 'SiblingTab - ' + (f.name.replace(/[^A-Za-z0-9 _-]/g, '').trim() || 'family') + ' - ' + year + '.csv' });
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
       }
     }, 'Download spreadsheet');
+    var printBtn = h('button', { class: 'btn', type: 'button', onclick: function () {
+      document.querySelectorAll('.tax-group').forEach(function (d) { d.open = true; });
+      window.print();
+    } }, 'Print or save as PDF');
+
+    var summary = L.taxSummary(f.members, f.expenses, year);
+    var people = summary.map(function (p) {
+      var groups = L.TAX_GROUPS.filter(function (g) { return p.groups[g.key]; }).map(function (g) {
+        var d = p.groups[g.key];
+        return h('details', { class: 'tax-group tax-' + g.key },
+          h('summary', null,
+            h('span', { class: 'tax-label' }, g.label,
+              h('small', { class: 'muted' }, d.count + (d.count === 1 ? ' expense' : ' expenses') +
+                (d.missing_receipts ? ' · ' + d.missing_receipts + ' without a receipt photo' : ''))),
+            h('strong', null, L.formatCents(d.total_cents))),
+          h('p', { class: 'muted small' }, g.hint),
+          h('ul', { class: 'tax-items' }, d.expenses.map(function (e) {
+            return h('li', null,
+              h('a', { href: '#/f/' + f.id + '/e/' + e.id }, e.description),
+              h('span', { class: 'muted small' }, ' ' + niceDate(e.spent_on) + ' · ' + L.categoryLabel(e.category) +
+                (e.receipt_path ? '' : ' · no receipt')),
+              h('span', { class: 'amt' }, L.formatCents(e.amount_cents)));
+          })));
+      });
+      return h('section', { class: 'card tax-person' },
+        h('div', { class: 'pair' }, avatar(p.user_id, 'sm'),
+          h('h2', { style: 'margin:0' }, nameOf(p.user_id) + ' paid ' + L.formatCents(p.total_cents))),
+        groups);
+    });
+
     render(famHeader('export'),
       h('section', { class: 'card' },
-        h('h2', null, 'Download for tax time'),
-        h('p', null, 'Get every expense and sibling payment as a spreadsheet that opens in Excel, Numbers or Google Sheets. Each person’s share is in its own column.'),
-        f.expenses.length ? [field('Which year?', sel), btn] : h('p', { class: 'muted' }, 'Add some expenses first.'),
-        h('p', { class: 'muted small' }, 'Receipt photos stay in the app: open an expense to view or save its receipt.')));
+        h('h2', null, 'Tax summary'),
+        field('Tax year', sel),
+        h('p', null, 'What each of you paid in ', h('strong', null, year), ', sorted by how the CRA usually treats it. ',
+          'Generally the sibling who paid a bill is the one who can claim it. Tap a group to see the expenses.'),
+        h('div', { class: 'actions no-print' }, printBtn, csvBtn)),
+      people.length ? people : h('section', { class: 'card' }, h('p', { class: 'muted' }, 'No expenses in ' + year + ', only paybacks.')),
+      h('section', { class: 'card' },
+        h('h2', null, 'Before you file'),
+        h('ul', { class: 'tax-notes' },
+          h('li', null, 'Medical expenses for a parent go on line 33199. Only the part above a minimum, based on your parent’s income, counts.'),
+          h('li', null, 'If a sibling paid you back for part of a bill, check with a tax professional about who should claim it.'),
+          h('li', null, 'Keep every receipt. Open an expense to view or save its photo.'),
+          h('li', null, 'Siblings can often also share the Canada caregiver credit for the same parent, up to one full claim in total.')),
+        h('p', { class: 'small no-print' }, h('a', { href: '#/resources' }, 'Caregiver tax checklist and CRA links')),
+        h('p', { class: 'muted small' }, 'This is a way to organize your records, not tax advice. Confirm your claims with the CRA or a tax professional.')));
   }
 
   // ---------------------------------------------------------------------------

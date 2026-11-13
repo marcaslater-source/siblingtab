@@ -42,4 +42,24 @@ assert.ok(lines[0].endsWith('Marc share,"Sis, ""J"" share"'));
 assert.ok(lines[1].includes(`"'=HYPERLINK(""x"")"`), lines[1]);
 assert.ok(lines[1].includes('Medication & pharmacy,') && lines[1].endsWith('Yes,5.01,5.00'));
 assert.ok(lines[2].startsWith('Payment between family,2026-04-01,,e-Transfer,5.00,"Sis, ""J""",Marc'));
+// Tax summary: grouped by payer, only the chosen year, receipts counted.
+const mem = [{ user_id: 'A' }, { user_id: 'B' }];
+const tx = [
+  { id: 1, paid_by: 'B', amount_cents: 5000, category: 'medication', spent_on: '2026-03-01', receipt_path: 'x' },
+  { id: 2, paid_by: 'B', amount_cents: 2000, category: 'medication', spent_on: '2026-01-05', receipt_path: null },
+  { id: 3, paid_by: 'B', amount_cents: 900, category: 'groceries', spent_on: '2026-02-01', receipt_path: null },
+  { id: 4, paid_by: 'A', amount_cents: 30000, category: 'care_home', spent_on: '2026-06-01', receipt_path: 'y' },
+  { id: 5, paid_by: 'A', amount_cents: 777, category: 'medical', spent_on: '2025-12-31', receipt_path: 'z' },
+  { id: 6, paid_by: 'A', amount_cents: 100, category: 'mystery', spent_on: '2026-07-01', receipt_path: 'z' }];
+const ts = L.taxSummary(mem, tx, 2026);
+assert.deepStrictEqual(ts.map(p => p.user_id), ['A', 'B']);
+assert.strictEqual(ts[0].total_cents, 30100);
+assert.strictEqual(ts[0].groups.check.count, 2);
+assert.strictEqual(ts[0].groups.often, undefined);
+assert.strictEqual(ts[1].total_cents, 7900);
+assert.deepStrictEqual(ts[1].groups.often, { total_cents: 7000, count: 2, missing_receipts: 1, expenses: [tx[1], tx[0]] });
+assert.strictEqual(ts[1].groups.not.missing_receipts, 1);
+assert.deepStrictEqual(L.taxSummary(mem, tx, 2024), []);
+L.CATEGORIES.forEach(c => assert.ok(L.TAX_GROUPS.some(g => g.cats.includes(c[0])), c[0]));
+
 console.log('logic tests passed');

@@ -115,9 +115,53 @@
     return rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n') + '\r\n';
   }
 
+  // How the CRA usually treats each category, for the tax summary. A rough sort, not tax advice.
+  var TAX_GROUPS = [
+    { key: 'often', label: 'Often claimable as medical expenses',
+      hint: 'Prescriptions, dental, medical services. Usually claimed on line 33199 by the sibling who paid.',
+      cats: ['medication', 'medical'] },
+    { key: 'check', label: 'Sometimes claimable: check the rules',
+      hint: 'Care homes, attendant care, equipment, medical travel and accessibility work can count, depending on the situation.',
+      cats: ['care_home', 'home_care', 'equipment', 'transport', 'home', 'other'] },
+    { key: 'not', label: 'Usually not claimable',
+      hint: 'Everyday living costs like groceries and meals.',
+      cats: ['groceries'] }
+  ];
+  function taxGroupOf(cat) {
+    for (var i = 0; i < TAX_GROUPS.length; i++) if (TAX_GROUPS[i].cats.indexOf(cat) >= 0) return TAX_GROUPS[i].key;
+    return 'check';
+  }
+
+  // For one year: what each person paid, grouped as above. People who paid nothing are left out.
+  function taxSummary(members, expenses, year) {
+    var byPayer = {};
+    expenses.forEach(function (e) {
+      if (String(e.spent_on).slice(0, 4) !== String(year)) return;
+      var p = byPayer[e.paid_by] = byPayer[e.paid_by] || { user_id: e.paid_by, total_cents: 0, groups: {} };
+      var g = p.groups[taxGroupOf(e.category)] = p.groups[taxGroupOf(e.category)] ||
+        { total_cents: 0, count: 0, missing_receipts: 0, expenses: [] };
+      p.total_cents += e.amount_cents;
+      g.total_cents += e.amount_cents; g.count++;
+      if (!e.receipt_path) g.missing_receipts++;
+      g.expenses.push(e);
+    });
+    var order = members.map(function (m) { return m.user_id; });
+    return Object.keys(byPayer).map(function (k) {
+      var p = byPayer[k];
+      Object.keys(p.groups).forEach(function (gk) {
+        p.groups[gk].expenses.sort(function (a, b) { return a.spent_on < b.spent_on ? -1 : a.spent_on > b.spent_on ? 1 : 0; });
+      });
+      return p;
+    }).sort(function (a, b) {
+      var ia = order.indexOf(a.user_id), ib = order.indexOf(b.user_id);
+      return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib);
+    });
+  }
+
   var api = {
     CATEGORIES: CATEGORIES, categoryLabel: categoryLabel, parseCents: parseCents, formatCents: formatCents,
-    evenSplit: evenSplit, netBalances: netBalances, whoOwesWhom: whoOwesWhom, buildCsv: buildCsv
+    evenSplit: evenSplit, netBalances: netBalances, whoOwesWhom: whoOwesWhom, buildCsv: buildCsv,
+    TAX_GROUPS: TAX_GROUPS, taxGroupOf: taxGroupOf, taxSummary: taxSummary
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.STLogic = api;

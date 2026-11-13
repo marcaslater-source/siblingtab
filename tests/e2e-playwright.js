@@ -106,7 +106,15 @@ const SHOTS = process.argv[2];
   if (!owe2.includes("$25.01")) throw new Error('after payment wrong: ' + owe2);
   step('partial payment recorded, now owes $25.01');
 
-  await page.getByRole('link', { name: 'Export' }).click(); await shot('export');
+  await page.getByRole('link', { name: 'Tax time' }).click();
+  await page.locator('.tax-person').first().waitFor();
+  const tax = (await page.locator('main').innerText()).replace(/\s+/g, ' ');
+  if (!tax.includes('Marc paid $30.00') || !tax.includes('Julie (you) paid $90.01')) throw new Error('tax totals wrong: ' + tax);
+  if (!tax.includes('Often claimable as medical expenses 1 expense $90.01')) throw new Error('tax group wrong: ' + tax);
+  if (!tax.includes('Sometimes claimable: check the rules 1 expense · 1 without a receipt photo $30.00')) throw new Error('tax check group wrong: ' + tax);
+  await page.locator('.tax-often summary').click();
+  await page.getByRole('link', { name: 'Shoppers – prescriptions' }).waitFor(); await shot('export');
+  step('tax summary groups what each sibling paid');
   const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download spreadsheet' }).click()]);
   const csv = fs.readFileSync(await dl.path(), 'utf8');
   console.log('   CSV file:', dl.suggestedFilename()); console.log(csv.split('\r\n').map(l => '   ' + l).join('\n'));
