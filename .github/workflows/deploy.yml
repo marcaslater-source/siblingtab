@@ -18,13 +18,19 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up SSH
+        env:
+          # Secrets go in as environment variables so special characters can't break the script.
+          SG_SSH_KEY: ${{ secrets.SG_SSH_KEY }}
+          SG_SSH_PASSPHRASE: ${{ secrets.SG_SSH_PASSPHRASE }}
+          SG_HOST: ${{ secrets.SG_HOST }}
+          SG_PORT: ${{ secrets.SG_PORT }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SG_SSH_KEY }}" > ~/.ssh/id_deploy
+          printf '%s\n' "$SG_SSH_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           # SiteGround keys come with a passphrase; strip it on this temporary runner only.
-          ssh-keygen -p -P "${{ secrets.SG_SSH_PASSPHRASE }}" -N "" -f ~/.ssh/id_deploy
-          ssh-keyscan -p ${{ secrets.SG_PORT }} ${{ secrets.SG_HOST }} >> ~/.ssh/known_hosts
+          ssh-keygen -p -P "$SG_SSH_PASSPHRASE" -N "" -f ~/.ssh/id_deploy
+          ssh-keyscan -p "$SG_PORT" "$SG_HOST" >> ~/.ssh/known_hosts
 
       - name: Publish landing page (siblingtab.com)
         run: |
