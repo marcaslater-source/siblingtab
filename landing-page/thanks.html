@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>You're on the list · SiblingTab</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1d2a2a;--muted:#5d6867;--line:#e6e1d8;--bg:#faf7f2;--teal:#1f5c57;--teal2:#e3efec}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.55;font-size:17px}
+.wrap{max-width:680px;margin:0 auto;padding:40px 20px 80px}
+h1,h2{font-family:Fraunces,Georgia,serif;letter-spacing:-.015em;line-height:1.15}
+h1{font-size:clamp(32px,5vw,44px);margin:30px 0 10px}
+p{color:var(--muted)}
+.logo{font-family:Fraunces,Georgia,serif;font-weight:700;font-size:22px;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.logo img{border-radius:8px;display:block}
+.dl{display:grid;gap:14px;margin:28px 0 40px}
+.dl a{display:flex;gap:14px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;text-decoration:none;color:var(--ink)}
+.dl a:hover{border-color:var(--teal)}
+.ico{width:44px;height:52px;border-radius:8px;background:var(--teal);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center;flex:none}
+.dl small{display:block;color:var(--muted)}
+.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px}
+textarea,select{width:100%;font:inherit;font-size:16px;padding:12px;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 14px;background:#fff}
+label{font-weight:600;font-size:15px}
+button{padding:14px 22px;font:inherit;font-weight:600;color:#fff;background:var(--teal);border:0;border-radius:12px;cursor:pointer}
+.hidden{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <a class="logo" href="/"><img src="img/logo.svg" alt="" width="28" height="28">SiblingTab</a>
+ <h1>You're on the list. Here are your downloads.</h1>
+ <p>Thanks for joining. We'll email you when early access opens. Bookmark this page if you want the files again.</p>
+
+ <div class="dl">
+  <a href="downloads/caregiver-tax-credit-checklist.pdf" download><div class="ico">PDF</div><div><b>Caregiver tax credit checklist</b><small>2 pages · for your 2026 return</small></div></a>
+  <a href="downloads/sibling-care-cost-split.xlsx" download><div class="ico">XLSX</div><div><b>Sibling cost-splitting spreadsheet</b><small>Works in Excel, Google Sheets and Numbers</small></div></a>
+ </div>
+
+ <div class="card">
+  <h2 style="margin:0 0 6px;font-size:24px">One quick question (optional)</h2>
+  <p style="margin-top:0">We're building SiblingTab with families like yours. Your answer shapes what we build first.</p>
+  <form name="survey" method="POST" action="https://formspree.io/f/xwlopowy" data-fs data-next="thanks-survey.html">
+   <input type="hidden" name="form" value="survey">
+   <input type="text" name="_gotcha" class="hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
+   <label for="who">Which best describes you?</label>
+   <select id="who" name="who">
+    <option value="">Choose one</option>
+    <option>I do most of the caregiving</option>
+    <option>I help, but a sibling does more</option>
+    <option>I live far away and mostly help with money</option>
+    <option>I'm the only child / sole caregiver</option>
+    <option>Other</option>
+   </select>
+   <label for="pain">What's the most frustrating part of sharing a parent's care with your family?</label>
+   <textarea id="pain" name="pain" rows="4"></textarea>
+   <label for="email">Your email (so we can follow up, optional)</label>
+   <input type="email" id="email" name="email" style="width:100%;font:inherit;font-size:16px;padding:12px;border:1.5px solid var(--line);border-radius:12px;margin:6px 0 14px">
+   <label style="font-weight:500;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" name="interview" value="yes" style="width:auto;margin-top:4px"> I'd be open to a 20-minute call to share my experience.</label>
+   <p style="margin:18px 0 0"><button type="submit">Send</button></p>
+  </form>
+ </div>
+</div>
+<script>
+// Sends the form to Formspree in the background, then goes to the thank-you page.
+document.querySelectorAll('form[data-fs]').forEach(function(f){
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    var btn=f.querySelector('button[type=submit]'); if(btn){btn.disabled=true;btn.textContent='Sending…';}
+    fetch(f.action,{method:'POST',body:new FormData(f),headers:{'Accept':'application/json'}})
+      .then(function(r){ if(r.ok){ location.href=f.dataset.next; return; }
+        return r.json().catch(function(){return {};}).then(function(d){
+          var m=(d.errors||[]).map(function(x){return x.message;}).join(' ')||d.error||('error '+r.status);
+          throw new Error(m);
+        });
+      })
+      .catch(function(err){ if(btn){btn.disabled=false;btn.textContent='Try again';} alert('Sorry, that didn\'t go through. ('+(err&&err.message||'network error')+')'); });
+  });
+});
+</script>
+<script src="/consent.js?v=1" defer></script>
+</body>
+</html>

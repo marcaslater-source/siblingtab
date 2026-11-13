@@ -1,0 +1,51 @@
+# Publishes the landing page and the app to SiteGround whenever you push to main.
+# Needs 5 GitHub "secrets" (see GUIDE.md). Nothing secret is stored in this file.
+name: Deploy to SiteGround
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      # On pull requests this is a rehearsal: it lists what WOULD change and changes nothing.
+      DRY: ${{ github.event_name == 'pull_request' && '--dry-run -i' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        env:
+          # Secrets go in as environment variables so special characters can't break the script.
+          SG_SSH_KEY: ${{ secrets.SG_SSH_KEY }}
+          SG_SSH_PASSPHRASE: ${{ secrets.SG_SSH_PASSPHRASE }}
+          SG_HOST: ${{ secrets.SG_HOST }}
+          SG_PORT: ${{ secrets.SG_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SG_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          # SiteGround keys come with a passphrase; strip it on this temporary runner only.
+          ssh-keygen -p -P "$SG_SSH_PASSPHRASE" -N "" -f ~/.ssh/id_deploy
+          ssh-keyscan -p "$SG_PORT" "$SG_HOST" >> ~/.ssh/known_hosts
+
+      - name: Publish landing page (siblingtab.com)
+        run: |
+          rsync -az $DRY -e "ssh -i ~/.ssh/id_deploy -p ${{ secrets.SG_PORT }}" \
+            --exclude 'downloads/*.zip' --exclude '*.zip' --exclude 'DEPLOY.md' \
+            landing-page/ ${{ secrets.SG_USER }}@${{ secrets.SG_HOST }}:${{ secrets.SG_LANDING_DIR }}/
+
+      - name: Publish app (app.siblingtab.com)
+        run: |
+          rsync -az $DRY -e "ssh -i ~/.ssh/id_deploy -p ${{ secrets.SG_PORT }}" \
+            app/ ${{ secrets.SG_USER }}@${{ secrets.SG_HOST }}:${{ secrets.SG_APP_DIR }}/
+
+      - name: Flush SiteGround cache (best effort)
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        run: |
+          ssh -i ~/.ssh/id_deploy -p ${{ secrets.SG_PORT }} ${{ secrets.SG_USER }}@${{ secrets.SG_HOST }} \
+            "site-tools-client domain-all update id=1 flush_cache=1"

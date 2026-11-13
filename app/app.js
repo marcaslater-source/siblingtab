@@ -183,6 +183,7 @@
 
     if (state.recovering) return viewNewPassword();
     if (parts[0] === 'resources') return viewResources();
+    if (parts[0] === 'unsubscribe' && parts[1]) return viewUnsubscribe(parts[1]);
 
     if (!me()) {
       if (parts[0] === 'join' && parts[1]) lsSet(PENDING_INVITE, parts[1]);
@@ -341,6 +342,65 @@
   // Families
   // ---------------------------------------------------------------------------
 
+
+  // ---------------------------------------------------------------------------
+  // First-run walkthrough. "Done" is remembered on this device only (local storage,
+  // keyed by login), so no extra data is stored about anyone.
+  // ---------------------------------------------------------------------------
+
+  function tourKey() { return 'siblingtab.tour.' + (me() ? me().id : ''); }
+  function tourSteps(kind, famName) {
+    var joined = kind === 'joined';
+    return [
+      joined
+        ? { emoji: '👋', title: 'Welcome to ' + (famName || 'your family') + '’s space', text: 'Caring for a loved one takes a team. Keep track of it together. This is where your family shares what’s been spent on their care, in one place.' }
+        : { emoji: '👋', title: 'Welcome to SiblingTab', text: 'Caring for a loved one takes a team. Keep track of it together. Start by making a family space, then send your siblings an invite link. If one of them already did, ask for their link instead.' },
+      { emoji: '🧾', title: 'Add an expense', text: 'Tap “+ Add an expense” when you pay for something, and snap a photo of the receipt. It stays safely with the entry, ready for tax time.' },
+      { emoji: '🤝', title: 'See where things stand', text: 'The “Who owes” tab shows a simple tally and an easy way to even things out. There’s no scorekeeping. Everyone helps in different ways, and this just keeps the money side clear.' },
+      { emoji: '📋', title: 'Tax time', text: 'The “Tax time” tab gathers the year’s receipts by who paid, so it’s all ready if you claim the caregiver credit or medical expenses. We’re here whenever you need it.' }
+    ];
+  }
+  function showTour(kind, famName, force) {
+    if (!me()) return;
+    if (!force && lsGet(tourKey())) return;
+    if (document.getElementById('tour')) return;
+    var steps = tourSteps(kind, famName), i = 0;
+    var key = tourKey();
+    var opener = document.activeElement;
+    var title = h('h2', { id: 'tour-title' }), text = h('p'), emoji = h('div', { class: 'tour-emoji', 'aria-hidden': 'true' });
+    var dots = h('div', { class: 'tour-dots', 'aria-hidden': 'true' });
+    var next = h('button', { class: 'btn primary', type: 'button', id: 'tour-next' });
+    var back = h('button', { class: 'btn ghost', type: 'button', id: 'tour-back' }, 'Back');
+    var skip = h('button', { class: 'btn ghost', type: 'button', id: 'tour-skip' }, 'Skip');
+    var box = h('div', { class: 'tour-box card', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'tour-title' },
+      h('img', { class: 'tour-logo', src: 'icons/icon.svg', alt: '', width: '44', height: '44' }),
+      emoji, title, text, dots, h('div', { class: 'tour-actions' }, back, skip, next));
+    var overlay = h('div', { id: 'tour', class: 'tour-overlay' }, box);
+    function close() {
+      lsSet(key, '1');
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      if (opener && opener.focus) try { opener.focus(); } catch (e) { /* gone */ }
+    }
+    function onKey(ev) { if (ev.key === 'Escape') close(); }
+    function draw() {
+      var st = steps[i];
+      emoji.textContent = st.emoji; title.textContent = st.title; text.textContent = st.text;
+      dots.replaceChildren();
+      steps.forEach(function (_, n) { dots.appendChild(h('span', { class: n === i ? 'on' : null })); });
+      back.hidden = i === 0;
+      skip.hidden = i === steps.length - 1;
+      next.textContent = i === steps.length - 1 ? 'Got it' : 'Next';
+      next.focus();
+    }
+    next.addEventListener('click', function () { if (i < steps.length - 1) { i++; draw(); } else close(); });
+    back.addEventListener('click', function () { if (i > 0) { i--; draw(); } });
+    skip.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+    draw();
+  }
+
   function viewFamilyList(fams) {
     render(h('section', { class: 'card narrow' },
       h('h1', null, 'Your families'),
@@ -369,6 +429,7 @@
           } catch (err) { toast(friendlyError(err), true); } finally { busy(btn, false); }
         }
       }, field('Name for this family space', famName), field('Your name, as your siblings know you', myName), btn)));
+    if (first) showTour('new');
   }
 
   async function viewJoin(code) {
@@ -392,6 +453,7 @@
             var fid = must(await sb.rpc('join_family', { invite_code: code, my_name: myName.value }));
             toast('You’ve joined ' + row.family_name);
             go('#/f/' + fid);
+            showTour('joined', row.family_name);
           } catch (err) { toast(friendlyError(err), true); } finally { busy(btn, false); }
         }
       }, field('Your name, as your siblings know you', myName), btn)));
@@ -902,6 +964,19 @@
 
   // Make a square, small JPEG from any photo the person picks.
   // Free downloads (hosted on the main site) and official CRA pages. Open to everyone.
+  // The link in the monthly email. Works without logging in.
+  async function viewUnsubscribe(token) {
+    render(h('section', { class: 'card narrow' }, h('p', { class: 'muted' }, 'One moment…')));
+    var failed = false;
+    try { must(await sb.rpc('unsubscribe_by_token', { t: token })); } catch (e) { failed = true; }
+    render(h('section', { class: 'card narrow' },
+      h('h1', null, failed ? 'Something went wrong' : 'You’re unsubscribed'),
+      h('p', null, failed
+        ? 'We couldn’t update your email settings. Please try again, or turn the switch off on your Account page.'
+        : 'You won’t get the monthly summary email any more. You can turn it back on any time on your Account page.'),
+      h('p', null, h('a', { class: 'btn', href: me() ? '#/account' : '#/login' }, me() ? 'Go to my account' : 'Log in'))));
+  }
+
   function viewResources() {
     var SITE = 'https://siblingtab.com/';
     var CRA = 'https://www.canada.ca/en/revenue-agency/services/';
@@ -1043,6 +1118,24 @@
       }
     }, field('Current password', cur), field('New password', pw1, 'At least 8 characters.'), field('New password again', pw2), pwBtn);
 
+    // --- Monthly summary email (off unless you turn it on) ---
+    var summaryOn = false;
+    try { summaryOn = must(await sb.rpc('get_monthly_summary')) === true; } catch (e) { /* not set up yet */ }
+    var summaryBox = h('input', { type: 'checkbox', checked: summaryOn, id: 'summary-toggle' });
+    summaryBox.addEventListener('change', async function () {
+      var want = summaryBox.checked;
+      summaryBox.disabled = true;
+      try {
+        must(await sb.rpc('set_monthly_summary', { enabled: want }));
+        toast(want ? 'Monthly summary is on' : 'Monthly summary is off');
+      } catch (err) { summaryBox.checked = !want; toast(friendlyError(err), true); }
+      summaryBox.disabled = false;
+    });
+    var summaryCard = h('section', { class: 'card' },
+      h('h2', null, 'Monthly summary email'),
+      h('label', { class: 'check', for: 'summary-toggle' }, summaryBox, 'Email me a summary once a month'),
+      h('p', { class: 'muted small' }, 'On the 1st of each month: what your family spent last month, who covered what, a simple way to even things out, and any receipts still to add. Only your own family’s numbers, and every email has an unsubscribe link.'));
+
     // --- Delete account ---
     var confirmInput = h('input', { type: 'text', autocomplete: 'off', placeholder: 'DELETE' });
     var delBtn = h('button', { class: 'btn danger', type: 'submit' }, 'Delete my account');
@@ -1097,8 +1190,10 @@
         h('p', { class: 'muted small' }, 'Logged in as ', h('strong', null, user.email)),
         h('div', { class: 'actions' }, h('a', { class: 'btn', href: '#/families' }, 'My family spaces'), logout),
         h('p', { class: 'small' }, h('a', { href: '#/resources' }, 'Free caregiver resources')),
+        h('p', { class: 'small' }, h('button', { class: 'link-btn', type: 'button', id: 'replay-tour', onclick: function () { showTour('new', null, true); } }, 'Show the quick tour again')),
         ownerLink,
         legalLinks()),
+      summaryCard,
       h('section', { class: 'card' }, h('h2', null, 'Change your password'), pwForm),
       h('section', { class: 'card' }, h('h2', null, 'Change your email'), emailForm),
       h('details', { class: 'card danger-zone' },

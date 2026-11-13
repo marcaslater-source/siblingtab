@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SiblingTab · Share the cost of caring for Mom or Dad, fairly</title>
+<meta name="google-site-verification" content="Z9b2b7VTDWJ-B8YozYT6HFm11bbE-mODxtb2vPfCKu0">
+<meta name="description" content="One shared tab for siblings caring for an aging parent in Canada. Track who paid what, keep CRA-ready receipts, and split the work fairly.">
+<meta property="og:title" content="SiblingTab · Share the cost of caring for Mom or Dad, fairly">
+<meta property="og:description" content="Track who paid what, keep CRA-ready receipts, and split the work fairly. Free caregiver tax credit checklist inside.">
+<meta property="og:image" content="img/s1.png">
+<link rel="icon" href="img/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1d2a2a;--muted:#5d6867;--line:#e6e1d8;--bg:#faf7f2;--card:#fff;--teal:#1f5c57;--teal-d:#174744;--teal2:#e3efec;--coral:#d9694a;--sand:#f3ece0}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.55;font-size:17px}
+img{max-width:100%;display:block}
+a{color:var(--teal)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;letter-spacing:-.015em;line-height:1.15;margin:0}
+h1{font-size:clamp(34px,5.4vw,56px)}
+h2{font-size:clamp(28px,3.8vw,40px)}
+h3{font-size:21px}
+.eyebrow{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--coral)}
+.lede{font-size:clamp(18px,2vw,20px);color:var(--muted);max-width:36em}
+nav{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
+.logo{font-family:Fraunces,Georgia,serif;font-weight:700;font-size:22px;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:8px}
+.logo img{width:30px;height:30px;border-radius:8px;display:block}
+.navlinks{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.trylink{font-size:15px;margin-top:14px}
+.navlink{font-weight:600;font-size:15px;text-decoration:none}
+@media (max-width:480px){.navlinks{gap:16px}.navopt{display:none}}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;padding:40px 0 70px}
+.hero p{margin:20px 0 28px}
+.hero-img{display:flex;justify-content:center}
+.hero-img img{width:min(330px,80vw);filter:drop-shadow(0 30px 40px rgba(31,92,87,.18))}
+form.signup{display:flex;flex-wrap:wrap;gap:10px;max-width:520px}
+.signup input[type=email]{flex:1 1 240px;min-width:0;padding:15px 16px;font:inherit;border:1.5px solid var(--line);border-radius:12px;background:#fff}
+.signup input[type=email]:focus,select:focus{outline:3px solid var(--teal2);border-color:var(--teal)}
+button{padding:15px 22px;font:inherit;font-weight:600;color:#fff;background:var(--teal);border:0;border-radius:12px;cursor:pointer}
+button:hover{background:var(--teal-d)}
+.fine{font-size:13px;color:var(--muted);margin-top:10px;max-width:520px}
+.fine label{display:flex;gap:8px;align-items:flex-start}
+.fine input{margin-top:3px}
+select{padding:13px 12px;font:inherit;font-size:15px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);flex:1 1 200px}
+.hidden{position:absolute;left:-9999px}
+section{padding:80px 0}
+.band{background:#fff;border-block:1px solid var(--line)}
+.pain{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:36px}
+.pain div{background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:24px}
+.pain q{display:block;font-family:Fraunces,Georgia,serif;font-size:20px;line-height:1.3;margin-bottom:10px;quotes:"“" "”"}
+.pain span{color:var(--muted);font-size:15px}
+.features{display:grid;gap:80px;margin-top:50px}
+.feat{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.feat:nth-child(even) .shot{order:-1}
+.feat .shot{display:flex;justify-content:center}
+.feat .shot img{width:min(300px,75vw);filter:drop-shadow(0 24px 34px rgba(0,0,0,.12))}
+.feat p{color:var(--muted);margin:14px 0 0}
+.feat ul{padding:0;margin:18px 0 0;list-style:none}
+.feat li{padding-left:28px;position:relative;margin:8px 0}
+.feat li:before{content:"";position:absolute;left:0;top:7px;width:16px;height:16px;border-radius:50%;background:var(--teal2);box-shadow:inset 0 0 0 4px var(--teal2),inset 0 0 0 8px var(--teal)}
+.magnet{background:var(--teal);color:#fff;border-radius:28px;padding:48px;display:grid;grid-template-columns:1.2fr .8fr;gap:40px;align-items:center}
+.magnet h2{color:#fff}
+.magnet p{color:#d5e6e2}
+.magnet .fine{color:#cfe1dd}
+.magnet .fine a{color:#fff}
+.magnet button{background:var(--coral)}
+.magnet button:hover{background:#c55a3d}
+.magnet ul{margin:18px 0 26px;padding-left:20px;color:#eaf3f1}
+.files{display:grid;gap:14px}
+.file{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:18px;display:flex;gap:14px;align-items:center}
+.file b{display:block}
+.file small{color:#cfe1dd}
+.ico{width:44px;height:52px;border-radius:8px;background:#fff;color:var(--teal);font-weight:800;font-size:12px;display:grid;place-items:center;flex:none}
+.price{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+.pcard{background:#fff;border:1px solid var(--line);border-radius:22px;padding:32px}
+.amount{font-family:Fraunces,Georgia,serif;font-size:52px;font-weight:700}
+.amount small{font-family:Inter,sans-serif;font-size:16px;color:var(--muted);font-weight:500}
+.faq{max-width:760px}
+details{border-bottom:1px solid var(--line);padding:18px 0}
+summary{font-weight:600;cursor:pointer;font-size:18px}
+details p{color:var(--muted);margin:10px 0 0}
+footer{padding:40px 0 60px;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+@media (max-width:860px){
+ .hero,.feat,.magnet,.price{grid-template-columns:1fr}
+ .feat:nth-child(even) .shot{order:0}
+ .pain{grid-template-columns:1fr}
+ .magnet{padding:32px 22px}
+ section{padding:60px 0}
+ .hero{padding-top:20px}
+}
+</style>
+</head>
+<body>
+
+<header class="wrap">
+ <nav>
+  <a class="logo" href="/"><img src="img/logo.svg" alt="" width="30" height="30">SiblingTab</a>
+  <div class="navlinks">
+   <a class="navlink" href="guides/">Guides</a>
+   <a class="navlink navopt" href="#checklist">Free tax checklist</a>
+   <a class="navlink" href="https://app.siblingtab.com">Log in</a>
+  </div>
+ </nav>
+
+ <div class="hero">
+  <div>
+   <div class="eyebrow">For Canadian families caring for a parent</div>
+   <h1 style="margin-top:14px">Caring for a loved one takes a team. Keep track of it together.</h1>
+   <p class="lede">SiblingTab is one shared tab for your family: who paid what, every receipt ready for CRA, and a clear view of who's doing the driving, the calls and the visits.</p>
+   <form class="signup" name="waitlist" method="POST" action="https://formspree.io/f/xwlopowy" data-fs data-next="thanks.html">
+    <input type="hidden" name="form" value="waitlist">
+    <input type="hidden" name="source" value="hero">
+    <input type="text" name="_gotcha" class="hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <input type="email" name="email" placeholder="you@example.com" required aria-label="Email address">
+    <button type="submit">Join the waitlist</button>
+    <div class="fine"><label><input type="checkbox" name="consent" value="yes" required> Email me when SiblingTab launches and send the free caregiver tax checklist. Unsubscribe anytime.</label></div>
+   </form>
+   <p class="trylink">Want to start now? <a href="https://app.siblingtab.com/#/signup"><strong>Try the early version</strong></a>: shared expenses, receipt photos and who owes whom.</p>
+  </div>
+  <div class="hero-img"><img src="img/s1.png" alt="SiblingTab app showing a month of shared care expenses split between three siblings"></div>
+ </div>
+</header>
+
+<section class="band">
+ <div class="wrap">
+  <div class="eyebrow">Sound familiar?</div>
+  <h2 style="margin-top:10px;max-width:20em">The care is hard enough. Then come the money talks.</h2>
+  <div class="pain">
+   <div><q>I've been paying for Dad's prescriptions for two years and I honestly don't know how much it adds up to.</q><span>Receipts live in four wallets, three inboxes and a kitchen drawer.</span></div>
+   <div><q>My brother lives in Vancouver. He sends money, I do every appointment. Is that fair? We've never talked about it.</q><span>Time and money both count, but nobody's keeping score, so resentment does.</span></div>
+   <div><q>Our accountant asked which of us paid for the PSW. Nobody knew.</q><span>Families miss caregiver and medical credits they were entitled to.</span></div>
+  </div>
+ </div>
+</section>
+
+<section>
+ <div class="wrap">
+  <div class="eyebrow">How it works</div>
+  <h2 style="margin-top:10px">Money, receipts and time, in one place your whole family can see.</h2>
+  <div class="features">
+   <div class="feat">
+    <div>
+     <h3>See who paid what, and settle up in one tap</h3>
+     <p>Snap a receipt and tag who paid. SiblingTab keeps a running balance against the split your family agreed on, whether that's equal shares or something that fits your situation.</p>
+     <ul><li>Equal, percentage or custom splits</li><li>Running balance per sibling</li><li>Monthly summary emailed to everyone</li></ul>
+    </div>
+    <div class="shot"><img src="img/s1.png" alt="Shared expenses screen with a settle-up balance"></div>
+   </div>
+   <div class="feat">
+    <div>
+     <h3>CRA-ready receipts, sorted by who can claim them</h3>
+     <p>Every expense is tagged for the line it belongs on: medical expenses, home accessibility, caregiver credit. Come April, export a clean summary for each sibling or your accountant.</p>
+     <ul><li>Built around Canadian tax rules</li><li>PDF and CSV export for your accountant</li><li>Your data stored in Canada</li></ul>
+    </div>
+    <div class="shot"><img src="img/s2.png" alt="Tax receipts screen grouping expenses by CRA line"></div>
+   </div>
+   <div class="feat">
+    <div>
+     <h3>Make the invisible work visible</h3>
+     <p>Drives, visits, calls with the care agency: log it in seconds. Everyone sees who's carrying what, and open tasks are easy for someone else to pick up.</p>
+     <ul><li>Shared task list with "take it" button</li><li>Hours and visits per sibling</li><li>Optionally count time alongside money</li></ul>
+    </div>
+    <div class="shot"><img src="img/s3.png" alt="Task screen showing hours of care per sibling"></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section id="checklist" style="padding-top:20px">
+ <div class="wrap">
+  <div class="magnet">
+   <div>
+    <div class="eyebrow" style="color:#f4b8a6">Free download</div>
+    <h2 style="margin-top:10px">The caregiver tax credit checklist for Canadian families</h2>
+    <p>Most families caring for a parent miss credits they're entitled to. Get our plain-English checklist plus a ready-made spreadsheet for splitting costs between siblings.</p>
+    <form class="signup" name="waitlist" method="POST" action="https://formspree.io/f/xwlopowy" data-fs data-next="thanks.html">
+     <input type="hidden" name="form" value="waitlist">
+     <input type="hidden" name="source" value="checklist">
+     <input type="text" name="_gotcha" class="hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
+     <input type="email" name="email" placeholder="you@example.com" required aria-label="Email address">
+     <select name="province" aria-label="Province">
+      <option value="">Province (optional)</option>
+      <option>Ontario</option><option>British Columbia</option><option>Alberta</option><option>Quebec</option><option>Manitoba</option><option>Saskatchewan</option><option>Nova Scotia</option><option>New Brunswick</option><option>Newfoundland and Labrador</option><option>Prince Edward Island</option><option>Territories</option><option>Outside Canada</option>
+     </select>
+     <button type="submit">Send me the checklist</button>
+     <div class="fine"><label><input type="checkbox" name="consent" value="yes" required> Send me the checklist and email me when SiblingTab launches. Unsubscribe anytime. <a href="privacy.html">Privacy</a></label></div>
+    </form>
+   </div>
+   <div class="files">
+    <div class="file"><div class="ico">PDF</div><div><b>Caregiver tax credit checklist</b><small>Caregiver credit, medical expenses, DTC transfer, home accessibility, and who should claim what</small></div></div>
+    <div class="file"><div class="ico">XLSX</div><div><b>Sibling cost-splitting spreadsheet</b><small>Log expenses and hours, set your split, see who owes whom</small></div></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section>
+ <div class="wrap price">
+  <div>
+   <div class="eyebrow">Pricing</div>
+   <h2 style="margin-top:10px">One price for the whole family.</h2>
+   <p class="lede" style="margin-top:16px">Less than a hospital parking stub, split between however many siblings you have. Waitlist families get a founding-member discount.</p>
+  </div>
+  <div class="pcard">
+   <div class="amount">$8 <small>CAD / month per family</small></div>
+   <p style="color:var(--muted);margin:6px 0 18px">or $79 / year. Invite every sibling, spouse and helper at no extra cost.</p>
+   <a href="#checklist"><button type="button" style="width:100%">Join the waitlist</button></a>
+  </div>
+ </div>
+</section>
+
+<section class="band">
+ <div class="wrap faq">
+  <h2>Questions</h2>
+  <details><summary>When does SiblingTab launch?</summary><p>An early version is open now at <a href="https://app.siblingtab.com/#/signup">app.siblingtab.com</a>. It covers shared expenses with receipt photos, who owes whom, and a spreadsheet export, and there's no charge while it's in early access. More features are on the way; join the waitlist to hear about them.</p></details>
+  <details><summary>Is this tax advice?</summary><p>No. SiblingTab organizes your receipts and records around Canadian tax rules so you or your accountant can file accurately. Always confirm your claims with CRA or a tax professional.</p></details>
+  <details><summary>Where is my family's data stored?</summary><p>In Canada. We'll never sell your data or show you ads.</p></details>
+  <details><summary>Do all my siblings need to sign up?</summary><p>No. One person can start the family tab and invite others whenever they're ready. A monthly summary email, for siblings who'd rather not log in, is available: each person can switch it on in their Account page.</p></details>
+  <details><summary>Does it work in Quebec?</summary><p>Yes for tracking and splitting. Quebec-specific tax credit tagging is on our list.</p></details>
+ </div>
+</section>
+
+<footer class="wrap">
+ <div>© 2026 SiblingTab · Made in Toronto</div>
+ <div><a href="guides/">Guides</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="mailto:hello@siblingtab.com">hello@siblingtab.com</a> · <a href="#" data-cookie-settings>Cookie settings</a></div>
+</footer>
+
+<script>
+// Sends the form to Formspree in the background, then goes to the thank-you page.
+document.querySelectorAll('form[data-fs]').forEach(function(f){
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    var btn=f.querySelector('button[type=submit]'); if(btn){btn.disabled=true;btn.textContent='Sending…';}
+    fetch(f.action,{method:'POST',body:new FormData(f),headers:{'Accept':'application/json'}})
+      .then(function(r){ if(r.ok){ location.href=f.dataset.next; return; }
+        return r.json().catch(function(){return {};}).then(function(d){
+          var m=(d.errors||[]).map(function(x){return x.message;}).join(' ')||d.error||('error '+r.status);
+          throw new Error(m);
+        });
+      })
+      .catch(function(err){ if(btn){btn.disabled=false;btn.textContent='Try again';} alert('Sorry, that didn\'t go through. ('+(err&&err.message||'network error')+')'); });
+  });
+});
+</script>
+<script src="/consent.js?v=1" defer></script>
+</body>
+</html>
