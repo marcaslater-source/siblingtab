@@ -303,7 +303,7 @@
       h('h1', null, 'Share the costs of caring for Mom or Dad, without the awkward math.'),
       h('ul', { class: 'perks' },
         h('li', null, h('strong', null, 'Log every expense'), ' with a photo of the receipt.'),
-        h('li', null, h('strong', null, 'See who owes whom'), ', worked out fairly and to the cent.'),
+        h('li', null, h('strong', null, 'See the whole picture'), ', worked out fairly and to the cent.'),
         h('li', null, h('strong', null, 'Get ready for tax time'), ' with a summary of what each of you can likely claim.')),
       h('p', { class: 'small links-row' },
         h('a', { href: '#/resources' }, 'Free caregiver resources'),
@@ -356,7 +356,7 @@
         ? { emoji: '👋', title: 'Welcome to ' + (famName || 'your family') + '’s space', text: 'Caring for a loved one takes a team. Keep track of it together. This is where your family shares what’s been spent on their care, in one place.' }
         : { emoji: '👋', title: 'Welcome to SiblingTab', text: 'Caring for a loved one takes a team. Keep track of it together. Start by making a family space, then send your siblings an invite link. If one of them already did, ask for their link instead.' },
       { emoji: '🧾', title: 'Add an expense', text: 'Tap “+ Add an expense” when you pay for something, and snap a photo of the receipt. It stays safely with the entry, ready for tax time.' },
-      { emoji: '🤝', title: 'See where things stand', text: 'The “Who owes” tab shows a simple tally and an easy way to even things out. There’s no scorekeeping. Everyone helps in different ways, and this just keeps the money side clear.' },
+      { emoji: '🤝', title: 'See where things stand', text: 'The “Balances” tab shows a simple tally and an easy way to even things out. There’s no scorekeeping. Everyone helps in different ways, and this just keeps the money side clear.' },
       { emoji: '📋', title: 'Tax time', text: 'The “Tax time” tab gathers the year’s receipts by who paid, so it’s all ready if you claim the caregiver credit or medical expenses. We’re here whenever you need it.' }
     ];
   }
@@ -462,7 +462,7 @@
   // Header + tabs shown on every family screen.
   function famHeader(active) {
     var f = state.fam;
-    var tabs = [['expenses', 'Expenses'], ['balances', 'Who owes'], ['family', 'Family'], ['export', 'Tax time']];
+    var tabs = [['expenses', 'Expenses'], ['balances', 'Balances'], ['family', 'Family'], ['export', 'Tax time']];
     return [
       h('div', { class: 'fam-head' },
         h('h1', null, f.name),

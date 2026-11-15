@@ -106,7 +106,7 @@ const SHOTS = process.argv[2];
   step('receipt shows, split 45.01 / 45.00');
 
   await page.getByRole('link', { name: '‹ All expenses' }).click();
-  await page.getByRole('link', { name: 'Who owes' }).click();
+  await page.getByRole('link', { name: 'Balances' }).click();
   // Marc paid 30 (only his share), Julie paid 90.01 split → Marc owes Julie 45.00
   await page.locator('li.owe').waitFor(); await shot('balances');
   const owe = await page.locator('li.owe').innerText();
@@ -204,12 +204,12 @@ const SHOTS = process.argv[2];
   step('name changed; password change checks the current password');
   await page.getByRole('link', { name: 'My family spaces' }).click();
   await page.getByText('Mom’s care').first().click();
-  await page.getByRole('link', { name: 'Who owes' }).click();
+  await page.getByRole('link', { name: 'Balances' }).click();
   await page.locator('li.owe').waitFor();
   const owe3 = (await page.locator('li.owe').innerText()).replace(/\s+/g, ' ');
   if (!owe3.includes('Marc S (you) owes Julie')) throw new Error('renamed owe wrong: ' + owe3);
   if (await page.locator('li.owe img.avatar').count() < 1) throw new Error('no avatar on balances');
-  step('new name and photo show on Who owes');
+  step('new name and photo show on Balances');
 
   // Owner-only stats page
   await page.getByRole('link', { name: 'Account' }).click();
@@ -243,7 +243,7 @@ const SHOTS = process.argv[2];
   await page.getByLabel('Email').fill('marc@example.com');
   await page.getByLabel('Password').fill('newpass123');
   await page.getByRole('button', { name: 'Log in' }).click();
-  await page.getByRole('link', { name: 'Who owes' }).click();
+  await page.getByRole('link', { name: 'Balances' }).click();
   await page.locator('li.owe').waitFor(); await shot('former-member');
   const owe4 = (await page.locator('li.owe').innerText()).replace(/\s+/g, ' ');
   if (!owe4.includes('Former member')) throw new Error('former member wrong: ' + owe4);
