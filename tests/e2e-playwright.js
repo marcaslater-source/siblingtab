@@ -99,6 +99,38 @@ const SHOTS = process.argv[2];
   await page.getByText('Shoppers – prescriptions').waitFor({ timeout: 5000 }).catch(async e => { console.log('TOAST:', await page.locator('#toast').innerText(), '| H1:', await page.locator('h1').first().innerText(), errors); throw e; }); await shot('expenses');
   step('sibling adds expense with receipt photo');
 
+  // Automatic receipt reading: fills empty boxes, never overwrites typing, fails gracefully
+  const rpath = require('path').join(__dirname, 'receipt.png');
+  await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('heading', { name: 'Add an expense' }).waitFor();
+  await page.locator('input[type=file]').setInputFiles(rpath);
+  await page.getByText('Filled in from your receipt').waitFor(); await shot('receipt-read');
+  if (await page.getByLabel('Amount (CAD)').inputValue() !== '47.30') throw new Error('amount not filled');
+  if (await page.getByLabel('Date paid').inputValue() !== '2026-10-05') throw new Error('date not filled');
+  if (await page.getByLabel('What was it for?').inputValue() !== 'Shoppers Drug Mart – prescription') throw new Error('description not filled');
+  const sent = await page.evaluate(() => window.__scanLast);
+  if (!sent || sent.media_type !== 'image/jpeg' || !sent.image || sent.image.length > 1500000) throw new Error('bad image sent to reader');
+  step('receipt photo pre-fills amount, date and description');
+  // reader fails: manual entry still works and the person is told kindly
+  await page.evaluate(() => { window.__scanMode = 'fail'; });
+  await page.locator('input[type=file]').setInputFiles([]);
+  await page.locator('input[type=file]').setInputFiles(rpath);
+  await page.getByText('Couldn’t read this receipt automatically').waitFor();
+  step('reader failure shows a gentle message');
+  await page.evaluate(() => { window.__scanMode = 'limit'; });
+  await page.locator('input[type=file]').setInputFiles([]);
+  await page.locator('input[type=file]').setInputFiles(rpath);
+  await page.getByText('used today’s automatic readings').waitFor();
+  step('daily limit shows a gentle message');
+  // typing is never overwritten
+  await page.evaluate(() => { window.__scanMode = 'ok'; });
+  await page.getByLabel('Amount (CAD)').fill('12.00');
+  await page.locator('input[type=file]').setInputFiles([]);
+  await page.locator('input[type=file]').setInputFiles(rpath);
+  await page.getByText('Filled in from your receipt').waitFor();
+  if (await page.getByLabel('Amount (CAD)').inputValue() !== '12.00') throw new Error('typed amount was overwritten');
+  step('typed amount is kept');
+  await page.getByRole('link', { name: 'Cancel' }).click();
+
   await page.getByText('Shoppers – prescriptions').click();
   await page.locator('.receipt img').waitFor(); await shot('detail');
   const split = await page.locator('.facts').innerText();
