@@ -37,7 +37,8 @@ const csv = L.buildCsv(
   [{ expense_id: 'e1', user_id: 'A', share_cents: 501 }, { expense_id: 'e1', user_id: 'B', share_cents: 500 }],
   [{ from_user: 'B', to_user: 'A', amount_cents: 500, settled_on: '2026-04-01', note: 'e-Transfer' }], '2026');
 const lines = csv.trim().split('\r\n');
-assert.strictEqual(lines.length, 3);
+assert.strictEqual(lines.length, 5);
+assert.ok(lines[4].includes('For informational purposes only'));
 assert.ok(lines[0].endsWith('Marc share,"Sis, ""J"" share"'));
 assert.ok(lines[1].includes(`"'=HYPERLINK(""x"")"`), lines[1]);
 assert.ok(lines[1].includes('Medication & pharmacy,') && lines[1].endsWith('Yes,5.01,5.00'));

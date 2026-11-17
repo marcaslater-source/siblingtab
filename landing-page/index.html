@@ -8,7 +8,20 @@
 <meta name="description" content="One shared tab for siblings caring for an aging parent in Canada. Track who paid what, keep CRA-ready receipts, and split the work fairly.">
 <meta property="og:title" content="SiblingTab · Share the cost of caring for Mom or Dad, fairly">
 <meta property="og:description" content="Track who paid what, keep CRA-ready receipts, and split the work fairly. Free caregiver tax credit checklist inside.">
-<meta property="og:image" content="img/s1.png">
+<link rel="canonical" href="https://siblingtab.com/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://siblingtab.com/">
+<meta property="og:image" content="https://siblingtab.com/img/og-image.png">
+<meta property="og:image:alt" content="SiblingTab: caring for a loved one takes a team. Keep track of it together.">
+<meta property="og:site_name" content="SiblingTab">
+<meta property="og:locale" content="en_CA">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SiblingTab · Share the cost of caring for Mom or Dad, fairly">
+<meta name="twitter:description" content="One shared tab for siblings caring for an aging parent in Canada. Track who paid what, keep CRA-ready receipts, and split the work fairly.">
+<meta name="twitter:image" content="https://siblingtab.com/img/og-image.png">
+<script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "Organization", "@id": "https://siblingtab.com/#org", "name": "SiblingTab", "url": "https://siblingtab.com/", "logo": "https://siblingtab.com/img/apple-touch-icon.png", "email": "hello@siblingtab.com"}, {"@type": "WebSite", "@id": "https://siblingtab.com/#site", "url": "https://siblingtab.com/", "name": "SiblingTab", "inLanguage": "en-CA", "publisher": {"@id": "https://siblingtab.com/#org"}}, {"@type": "SoftwareApplication", "name": "SiblingTab", "url": "https://app.siblingtab.com", "applicationCategory": "FinanceApplication", "operatingSystem": "Web", "description": "A shared expense tracker for Canadian siblings caring for a parent: receipts, one family record and CSV export. Early access.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "CAD", "description": "Free during early access"}, "publisher": {"@id": "https://siblingtab.com/#org"}}, {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "When does SiblingTab launch?", "acceptedAnswer": {"@type": "Answer", "text": "An early version is open now at app.siblingtab.com. It covers shared expenses with receipt photos, one shared record for the whole family, and a spreadsheet export, and there's no charge while it's in early access. More features are on the way; join the waitlist to hear about them."}}, {"@type": "Question", "name": "Is this tax advice?", "acceptedAnswer": {"@type": "Answer", "text": "No. SiblingTab organizes your receipts and records around Canadian tax rules so you or your accountant can file accurately. Always confirm your claims with CRA or a tax professional."}}, {"@type": "Question", "name": "Where is my family's data stored?", "acceptedAnswer": {"@type": "Answer", "text": "In Canada. We'll never sell your data or show you ads."}}, {"@type": "Question", "name": "Do all my siblings need to sign up?", "acceptedAnswer": {"@type": "Answer", "text": "No. One person can start the family tab and invite others whenever they're ready. A monthly summary email, for siblings who'd rather not log in, is available: each person can switch it on in their Account page."}}, {"@type": "Question", "name": "Does it work in Quebec?", "acceptedAnswer": {"@type": "Answer", "text": "Yes for tracking and splitting. Quebec-specific tax credit tagging is on our list."}}]}]}</script>
 <link rel="icon" href="img/logo.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,21 +32,30 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.55;font-size:17px}
-img{max-width:100%;display:block}
+img{max-width:100%;height:auto;display:block}
 a{color:var(--teal)}
 .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
 h1,h2,h3{font-family:Fraunces,Georgia,serif;letter-spacing:-.015em;line-height:1.15;margin:0}
 h1{font-size:clamp(34px,5.4vw,56px)}
 h2{font-size:clamp(28px,3.8vw,40px)}
 h3{font-size:21px}
-.eyebrow{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--coral)}
+.eyebrow{font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--coral)}
 .lede{font-size:clamp(18px,2vw,20px);color:var(--muted);max-width:36em}
 nav{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
 .logo{font-family:Fraunces,Georgia,serif;font-weight:700;font-size:22px;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:8px}
 .logo img{width:30px;height:30px;border-radius:8px;display:block}
 .navlinks{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
-.trylink{font-size:15px;margin-top:14px}
+.early{max-width:520px;margin-top:26px;background:var(--teal2);border:1.5px solid var(--teal);border-left:6px solid var(--coral);border-radius:16px;padding:18px 20px}
+.hero .cdn{margin:14px 0 0;font-size:14px;font-weight:500;color:var(--muted)}
+.early-tag{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--coral)}
+.hero .early p{margin:6px 0 14px;font-size:16px;color:var(--ink)}
+.early-btn{display:inline-block;padding:14px 24px;background:var(--teal);color:#fff;font-weight:600;text-decoration:none;border-radius:12px}
+.early-btn:hover{background:var(--teal-d)}
+.early-btn:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+@media (max-width:480px){.early-btn{display:block;text-align:center}}
 .navlink{font-weight:600;font-size:15px;text-decoration:none}
+.navlogin{padding:8px 16px;border:1.5px solid var(--teal);border-radius:10px;background:#fff}
+.navlogin:hover{background:var(--teal);color:#fff}
 @media (max-width:480px){.navlinks{gap:16px}.navopt{display:none}}
 .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;padding:40px 0 70px}
 .hero p{margin:20px 0 28px}
@@ -104,13 +126,13 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;display:flex;justif
   <div class="navlinks">
    <a class="navlink" href="guides/">Guides</a>
    <a class="navlink navopt" href="#checklist">Free tax checklist</a>
-   <a class="navlink" href="https://app.siblingtab.com">Log in</a>
+   <a class="navlink navlogin" href="https://app.siblingtab.com" data-ga-event="login_click" data-ga-where="header">Log in</a>
   </div>
  </nav>
 
  <div class="hero">
   <div>
-   <div class="eyebrow">For Canadian families caring for a parent</div>
+   <div class="eyebrow"><span aria-hidden="true">🍁</span> For Canadian families caring for a parent</div>
    <h1 style="margin-top:14px">Caring for a loved one takes a team. Keep track of it together.</h1>
    <p class="lede">SiblingTab is one shared tab for your family: who paid what, every receipt ready for CRA, and a clear view of who's doing the driving, the calls and the visits.</p>
    <form class="signup" name="waitlist" method="POST" action="https://formspree.io/f/xwlopowy" data-fs data-next="thanks.html">
@@ -121,9 +143,14 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;display:flex;justif
     <button type="submit">Join the waitlist</button>
     <div class="fine"><label><input type="checkbox" name="consent" value="yes" required> Email me when SiblingTab launches and send the free caregiver tax checklist. Unsubscribe anytime.</label></div>
    </form>
-   <p class="trylink">Want to start now? <a href="https://app.siblingtab.com/#/signup"><strong>Try the early version</strong></a>: shared expenses, receipt photos and one shared record for the whole family.</p>
+   <div class="early">
+    <div class="early-tag">Early access is open</div>
+    <p><strong>Want to start now?</strong> Try the early version: shared expenses, receipt photos and one shared record for the whole family.</p>
+    <a class="early-btn" href="https://app.siblingtab.com/#/signup" data-ga-event="early_access_click" data-ga-where="hero">Try the early version &rarr;</a>
+   </div>
+   <p class="cdn">Made in Toronto · Your data stays in Canada · Built around CRA rules · Prices in CAD</p>
   </div>
-  <div class="hero-img"><img src="img/s1.png" alt="SiblingTab app showing a month of shared care expenses split between three siblings"></div>
+  <div class="hero-img"><img src="img/s1.png" width="720" height="1480" fetchpriority="high" alt="SiblingTab app showing a month of shared care expenses split between three siblings"></div>
  </div>
 </header>
 
@@ -150,7 +177,7 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;display:flex;justif
      <p>Snap a receipt and tag who paid. SiblingTab keeps a running balance against the split your family agreed on, whether that's equal shares or something that fits your situation.</p>
      <ul><li>Equal, percentage or custom splits</li><li>Running balance per sibling</li><li>Monthly summary emailed to everyone</li></ul>
     </div>
-    <div class="shot"><img src="img/s1.png" alt="Shared expenses screen with a settle-up balance"></div>
+    <div class="shot"><img src="img/s1.png" width="720" height="1480" loading="lazy" alt="Shared expenses screen with a settle-up balance"></div>
    </div>
    <div class="feat">
     <div>
@@ -158,7 +185,7 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;display:flex;justif
      <p>Every expense is tagged for the line it belongs on: medical expenses, home accessibility, caregiver credit. Come April, export a clean summary for each sibling or your accountant.</p>
      <ul><li>Built around Canadian tax rules</li><li>PDF and CSV export for your accountant</li><li>Your data stored in Canada</li></ul>
     </div>
-    <div class="shot"><img src="img/s2.png" alt="Tax receipts screen grouping expenses by CRA line"></div>
+    <div class="shot"><img src="img/s2.png" width="720" height="1480" loading="lazy" alt="Tax receipts screen grouping expenses by CRA line"></div>
    </div>
    <div class="feat">
     <div>
@@ -166,7 +193,7 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;display:flex;justif
      <p>Drives, visits, calls with the care agency: log it in seconds. Everyone sees who's carrying what, and open tasks are easy for someone else to pick up.</p>
      <ul><li>Shared task list with "take it" button</li><li>Hours and visits per sibling</li><li>Optionally count time alongside money</li></ul>
     </div>
-    <div class="shot"><img src="img/s3.png" alt="Task screen showing hours of care per sibling"></div>
+    <div class="shot"><img src="img/s3.png" width="720" height="1480" loading="lazy" alt="Task screen showing hours of care per sibling"></div>
    </div>
   </div>
  </div>
@@ -238,7 +265,7 @@ document.querySelectorAll('form[data-fs]').forEach(function(f){
     e.preventDefault();
     var btn=f.querySelector('button[type=submit]'); if(btn){btn.disabled=true;btn.textContent='Sending…';}
     fetch(f.action,{method:'POST',body:new FormData(f),headers:{'Accept':'application/json'}})
-      .then(function(r){ if(r.ok){ location.href=f.dataset.next; return; }
+      .then(function(r){ if(r.ok){ if(window.stTrack){ var src=f.querySelector('[name=source]'); window.stTrack('waitlist_signup',{form_source:src?src.value:''}); } setTimeout(function(){ location.href=f.dataset.next; },150); return; }
         return r.json().catch(function(){return {};}).then(function(d){
           var m=(d.errors||[]).map(function(x){return x.message;}).join(' ')||d.error||('error '+r.status);
           throw new Error(m);

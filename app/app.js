@@ -955,7 +955,7 @@
           h('li', null, 'Keep every receipt. Open an expense to view or save its photo.'),
           h('li', null, 'Siblings can often also share the Canada caregiver credit for the same parent, up to one full claim in total.')),
         h('p', { class: 'small no-print' }, h('a', { href: '#/resources' }, 'Caregiver tax checklist and CRA links')),
-        h('p', { class: 'muted small' }, 'This is a way to organize your records, not tax advice. Confirm your claims with the CRA or a tax professional.')));
+        h('p', { class: 'muted small' }, 'For informational purposes only. This is a way to organize your records, not tax advice. Confirm your claims with the CRA or a tax professional.')));
   }
 
   // Owner-only usage counts, straight from the database. No names, emails or family details.
@@ -1060,7 +1060,7 @@
           'Medical expenses you can claim', 'Which costs count, including many paid for a parent.'),
         item(CRA + 'tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html',
           'Disability tax credit', 'A credit that can often be transferred to a supporting family member.')),
-      h('p', { class: 'muted small' }, 'This is general information, not tax advice. For your situation, check with the CRA or a tax professional.'),
+      h('p', { class: 'muted small' }, 'For informational purposes only. This is general information, not tax advice. For your situation, check with the CRA or a tax professional.'),
       legalLinks()));
   }
 
