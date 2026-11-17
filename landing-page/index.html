@@ -33,6 +33,7 @@ nav{display:flex;justify-content:space-between;align-items:center;padding:18px 0
 .logo img{width:30px;height:30px;border-radius:8px;display:block}
 .navlinks{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
 .early{max-width:520px;margin-top:26px;background:var(--teal2);border:1.5px solid var(--teal);border-left:6px solid var(--coral);border-radius:16px;padding:18px 20px}
+.hero .cdn{margin:14px 0 0;font-size:14px;font-weight:500;color:var(--muted)}
 .early-tag{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--coral)}
 .hero .early p{margin:6px 0 14px;font-size:16px;color:var(--ink)}
 .early-btn{display:inline-block;padding:14px 24px;background:var(--teal);color:#fff;font-weight:600;text-decoration:none;border-radius:12px}
@@ -118,7 +119,7 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;display:flex;justif
 
  <div class="hero">
   <div>
-   <div class="eyebrow">For Canadian families caring for a parent</div>
+   <div class="eyebrow"><span aria-hidden="true">🍁</span> For Canadian families caring for a parent</div>
    <h1 style="margin-top:14px">Caring for a loved one takes a team. Keep track of it together.</h1>
    <p class="lede">SiblingTab is one shared tab for your family: who paid what, every receipt ready for CRA, and a clear view of who's doing the driving, the calls and the visits.</p>
    <form class="signup" name="waitlist" method="POST" action="https://formspree.io/f/xwlopowy" data-fs data-next="thanks.html">
@@ -134,6 +135,7 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;display:flex;justif
     <p><strong>Want to start now?</strong> Try the early version: shared expenses, receipt photos and one shared record for the whole family.</p>
     <a class="early-btn" href="https://app.siblingtab.com/#/signup">Try the early version &rarr;</a>
    </div>
+   <p class="cdn">Made in Toronto · Your data stays in Canada · Built around CRA rules · Prices in CAD</p>
   </div>
   <div class="hero-img"><img src="img/s1.png" alt="SiblingTab app showing a month of shared care expenses split between three siblings"></div>
  </div>
