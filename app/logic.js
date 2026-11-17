@@ -19,6 +19,21 @@
     return 'Other';
   }
 
+  // What to pre-fill after a receipt is read. Only boxes the person hasn't touched are filled, and only
+  // with values that make sense, so their own typing is never overwritten. `touched` = {amount, date, cat, desc}.
+  function receiptFill(result, touched, today) {
+    var fill = {};
+    if (!result || result.found === false) return fill;
+    touched = touched || {};
+    if (!touched.amount && typeof result.amount === 'number' && result.amount > 0) fill.amount = result.amount.toFixed(2);
+    if (!touched.date && /^\d{4}-\d{2}-\d{2}$/.test(result.date || '') && (!today || result.date <= today)) fill.date = result.date;
+    if (!touched.desc && typeof result.description === 'string' && result.description.trim()) fill.desc = result.description.trim().slice(0, 300);
+    if (!touched.cat && result.category) {
+      for (var i = 0; i < CATEGORIES.length; i++) if (CATEGORIES[i][0] === result.category) { fill.cat = result.category; break; }
+    }
+    return fill;
+  }
+
   // "$1,234.5" -> 123450. Returns null if it isn't a sensible positive amount.
   function parseCents(text) {
     if (text == null) return null;
@@ -159,7 +174,7 @@
   }
 
   var api = {
-    CATEGORIES: CATEGORIES, categoryLabel: categoryLabel, parseCents: parseCents, formatCents: formatCents,
+    CATEGORIES: CATEGORIES, categoryLabel: categoryLabel, receiptFill: receiptFill, parseCents: parseCents, formatCents: formatCents,
     evenSplit: evenSplit, netBalances: netBalances, whoOwesWhom: whoOwesWhom, buildCsv: buildCsv,
     TAX_GROUPS: TAX_GROUPS, taxGroupOf: taxGroupOf, taxSummary: taxSummary
   };
