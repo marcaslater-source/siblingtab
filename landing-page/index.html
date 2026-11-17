@@ -32,7 +32,13 @@ nav{display:flex;justify-content:space-between;align-items:center;padding:18px 0
 .logo{font-family:Fraunces,Georgia,serif;font-weight:700;font-size:22px;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:8px}
 .logo img{width:30px;height:30px;border-radius:8px;display:block}
 .navlinks{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
-.trylink{font-size:15px;margin-top:14px}
+.early{max-width:520px;margin-top:26px;background:var(--teal2);border:1.5px solid var(--teal);border-left:6px solid var(--coral);border-radius:16px;padding:18px 20px}
+.early-tag{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--coral)}
+.hero .early p{margin:6px 0 14px;font-size:16px;color:var(--ink)}
+.early-btn{display:inline-block;padding:14px 24px;background:var(--teal);color:#fff;font-weight:600;text-decoration:none;border-radius:12px}
+.early-btn:hover{background:var(--teal-d)}
+.early-btn:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+@media (max-width:480px){.early-btn{display:block;text-align:center}}
 .navlink{font-weight:600;font-size:15px;text-decoration:none}
 @media (max-width:480px){.navlinks{gap:16px}.navopt{display:none}}
 .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;padding:40px 0 70px}
@@ -121,7 +127,11 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;display:flex;justif
     <button type="submit">Join the waitlist</button>
     <div class="fine"><label><input type="checkbox" name="consent" value="yes" required> Email me when SiblingTab launches and send the free caregiver tax checklist. Unsubscribe anytime.</label></div>
    </form>
-   <p class="trylink">Want to start now? <a href="https://app.siblingtab.com/#/signup"><strong>Try the early version</strong></a>: shared expenses, receipt photos and one shared record for the whole family.</p>
+   <div class="early">
+    <div class="early-tag">Early access is open</div>
+    <p><strong>Want to start now?</strong> Try the early version: shared expenses, receipt photos and one shared record for the whole family.</p>
+    <a class="early-btn" href="https://app.siblingtab.com/#/signup">Try the early version &rarr;</a>
+   </div>
   </div>
   <div class="hero-img"><img src="img/s1.png" alt="SiblingTab app showing a month of shared care expenses split between three siblings"></div>
  </div>
