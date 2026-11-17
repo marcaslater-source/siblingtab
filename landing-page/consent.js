@@ -26,6 +26,18 @@
     document.head.appendChild(s);
   }
 
+  // Sends a GA4 event only when the visitor has allowed analytics (gtag exists
+  // only after "Allow") and has not switched it off since. Otherwise it does nothing.
+  window.stTrack = function (name, params) {
+    try {
+      if (window.gtag && window.__stGaLoaded && !window['ga-disable-' + GA_ID]) {
+        var p = params || {};
+        p.transport_type = 'beacon';
+        window.gtag('event', name, p);
+      }
+    } catch (e) {}
+  };
+
   function stopAnalytics() {
     window['ga-disable-' + GA_ID] = true;
     // Remove Google Analytics cookies (_ga, _ga_XXXX) for this site.
@@ -76,6 +88,12 @@
     var choice = getChoice();
     if (choice === 'yes') loadAnalytics();
     else if (choice !== 'no') showBanner();
+
+    // Any link or button with data-ga-event="name" reports that event on click.
+    document.addEventListener('click', function (e) {
+      var ev = e.target.closest && e.target.closest('[data-ga-event]');
+      if (ev) window.stTrack(ev.getAttribute('data-ga-event'), { link_location: ev.getAttribute('data-ga-where') || '' });
+    });
 
     document.addEventListener('click', function (e) {
       var t = e.target.closest && e.target.closest('[data-cookie-settings]');
