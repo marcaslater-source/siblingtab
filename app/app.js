@@ -300,7 +300,8 @@
 
     // First-time visitors (and invited siblings) land here, so say what SiblingTab is.
     var intro = mode === 'login' ? h('section', { class: 'intro narrow' },
-      h('h1', null, 'Share the costs of caring for Mom or Dad, without the awkward math.'),
+      h('h1', null, 'Caring for a loved one takes a team. Keep track of it together.'),
+      h('p', { class: 'muted' }, 'One shared record of expenses, receipts and care for the whole family.'),
       h('ul', { class: 'perks' },
         h('li', null, h('strong', null, 'Log every expense'), ' with a photo of the receipt.'),
         h('li', null, h('strong', null, 'See the whole picture'), ', worked out fairly and to the cent.'),

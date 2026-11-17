@@ -1,7 +1,7 @@
 {
   "name": "SiblingTab",
   "short_name": "SiblingTab",
-  "description": "Share and track the costs of caring for a parent with your siblings.",
+  "description": "Share and track the costs of caring for a loved one with your family.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
