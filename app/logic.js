@@ -112,6 +112,7 @@
         nameOf[p.from_user] || '', nameOf[p.to_user] || '', '']
         .concat(members.map(function () { return ''; })));
     });
+    rows.push([], ['For informational purposes only. Not legal, tax or financial advice. Check with the CRA or a qualified professional.']);
     return rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n') + '\r\n';
   }
 
