@@ -113,7 +113,7 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;display:flex;justif
   <div class="navlinks">
    <a class="navlink" href="guides/">Guides</a>
    <a class="navlink navopt" href="#checklist">Free tax checklist</a>
-   <a class="navlink navlogin" href="https://app.siblingtab.com">Log in</a>
+   <a class="navlink navlogin" href="https://app.siblingtab.com" data-ga-event="login_click" data-ga-where="header">Log in</a>
   </div>
  </nav>
 
@@ -133,7 +133,7 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;display:flex;justif
    <div class="early">
     <div class="early-tag">Early access is open</div>
     <p><strong>Want to start now?</strong> Try the early version: shared expenses, receipt photos and one shared record for the whole family.</p>
-    <a class="early-btn" href="https://app.siblingtab.com/#/signup">Try the early version &rarr;</a>
+    <a class="early-btn" href="https://app.siblingtab.com/#/signup" data-ga-event="early_access_click" data-ga-where="hero">Try the early version &rarr;</a>
    </div>
    <p class="cdn">Made in Toronto · Your data stays in Canada · Built around CRA rules · Prices in CAD</p>
   </div>
@@ -252,7 +252,7 @@ document.querySelectorAll('form[data-fs]').forEach(function(f){
     e.preventDefault();
     var btn=f.querySelector('button[type=submit]'); if(btn){btn.disabled=true;btn.textContent='Sending…';}
     fetch(f.action,{method:'POST',body:new FormData(f),headers:{'Accept':'application/json'}})
-      .then(function(r){ if(r.ok){ location.href=f.dataset.next; return; }
+      .then(function(r){ if(r.ok){ if(window.stTrack){ var src=f.querySelector('[name=source]'); window.stTrack('waitlist_signup',{form_source:src?src.value:''}); } setTimeout(function(){ location.href=f.dataset.next; },150); return; }
         return r.json().catch(function(){return {};}).then(function(d){
           var m=(d.errors||[]).map(function(x){return x.message;}).join(' ')||d.error||('error '+r.status);
           throw new Error(m);
