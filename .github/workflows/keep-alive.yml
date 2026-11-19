@@ -1,0 +1,31 @@
+name: Supabase keep-alive
+
+# Supabase's free tier pauses a project after 7 days without activity.
+# This makes one tiny database request every 3 days so that never happens.
+# It uses only the public (publishable) key that is already in app/config.js.
+# The public key is (correctly) not allowed to read the table, so the database
+# answers "401 permission denied". That answer still proves the database is
+# awake, so we treat 200 or that specific 401 as success.
+on:
+  schedule:
+    - cron: '17 9 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the SiblingTab database
+        run: |
+          body=$(mktemp)
+          code=$(curl -s -o "$body" -w '%{http_code}' --retry 3 --retry-delay 10 \
+            -H 'apikey: sb_publishable_4aPpt4-26ewsdMeoTjguCA_qJdI-Tqv' \
+            'https://oeoztluulroglfbvwyon.supabase.co/rest/v1/profiles?select=id&limit=1')
+          echo "Supabase answered: $code"
+          if [ "$code" = "200" ]; then exit 0; fi
+          if [ "$code" = "401" ] && grep -q '42501' "$body"; then
+            echo "Database is awake (it correctly refused the public key)."
+            exit 0
+          fi
+          cat "$body"
+          exit 1
