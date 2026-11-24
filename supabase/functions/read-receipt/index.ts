@@ -1,7 +1,8 @@
 // SiblingTab automatic receipt reading. Runs as a Supabase Edge Function ("read-receipt").
 // The app sends one shrunken receipt photo; this asks a Claude model to read the amount, date,
 // store and a suggested category, and returns them for the person to review. Nothing is saved here:
-// the photo is not stored and the result is not stored (only a "scanned once" counter, for daily limits).
+// the photo is not stored and the result is not stored (only a "scanned once" counter with how it ended,
+// for daily limits and the owner's aggregate stats).
 //
 // Secrets (Edge Functions -> Secrets):
 //   ANTHROPIC_API_KEY   created by the owner in the Anthropic Console, with a monthly spend limit
@@ -55,6 +56,17 @@ export function cleanResult(r: any, todayIso: string) {
   const category = CATEGORIES.includes(r.category) ? r.category : 'other';
   const description = store && summary ? `${store} – ${summary}` : store || summary;
   return { found: true, amount, date, description, category };
+}
+
+// Best effort: tell the database how this reading ended (for the owner's counts). Never blocks the answer.
+async function finish(fetchFn: typeof fetch, url: string, svc: string, user: string, outcome: string) {
+  try {
+    await fetchFn(url + '/rest/v1/rpc/finish_receipt_scan', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + svc, apikey: svc, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_user: user, p_outcome: outcome })
+    });
+  } catch { /* stats only */ }
 }
 
 function json(body: unknown, status = 200) {
@@ -111,14 +123,16 @@ export async function handle(req: Request, env: Record<string, string | undefine
         ] }]
       })
     });
-  } catch { return json({ error: 'unavailable' }, 502); }
-  if (!res.ok) return json({ error: 'unavailable' }, 502);
+  } catch { await finish(fetchFn, url, svc, user.id, 'error'); return json({ error: 'unavailable' }, 502); }
+  if (!res.ok) { await finish(fetchFn, url, svc, user.id, 'error'); return json({ error: 'unavailable' }, 502); }
   const out = await res.json();
   const block = Array.isArray(out.content) ? out.content.find((b: any) => b.type === 'tool_use') : null;
-  if (!block) return json({ error: 'unreadable' }, 422);
+  if (!block) { await finish(fetchFn, url, svc, user.id, 'unreadable'); return json({ error: 'unreadable' }, 422); }
 
   const today = new Date().toISOString().slice(0, 10);
-  return json(cleanResult(block.input, today));
+  const result = cleanResult(block.input, today);
+  await finish(fetchFn, url, svc, user.id, result.found ? 'read' : 'not_receipt');
+  return json(result);
 }
 
 // @ts-ignore: Deno is provided by Supabase when the function runs

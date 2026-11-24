@@ -11,6 +11,7 @@ const assert = require('assert');
       calls.push({ url: String(url), init });
       if (String(url).endsWith('/auth/v1/user')) return signedIn ? reply({ id: 'u1' }) : reply({}, 401);
       if (String(url).endsWith('/rpc/claim_receipt_scan')) return reply(verdict);
+      if (String(url).endsWith('/rpc/finish_receipt_scan')) return reply(null, 204);
       if (String(url).includes('api.anthropic.com')) return ai ? ai() : reply({ content: [{ type: 'tool_use', input: { is_receipt: true, total: 47.3, date: '2026-10-05', store: 'Shoppers', summary: 'prescription', category: 'medication' } }] });
       throw new Error('unexpected ' + url);
     };
@@ -26,6 +27,18 @@ const assert = require('assert');
   const sent = JSON.parse(t.calls[2].init.body);
   assert.strictEqual(sent.model, 'claude-sonnet-5-5'); assert.ok(sent.max_tokens <= 300);
   assert.strictEqual(t.calls[2].init.headers['x-api-key'], 'sk-test');
+
+  // the outcome is recorded (counts only, nothing about the receipt)
+  const outcomeOf = (tt) => { const c = tt.calls.find(x => x.url.endsWith('/finish_receipt_scan')); return c && JSON.parse(c.init.body); };
+  assert.deepStrictEqual(outcomeOf(t), { p_user: 'u1', p_outcome: 'read' });
+  t = fake({ ai: () => reply({ content: [{ type: 'tool_use', input: { is_receipt: false } }] }) }); await handle(req(good), env, t.f);
+  assert.strictEqual(outcomeOf(t).p_outcome, 'not_receipt');
+  t = fake({ ai: () => reply({}, 500) }); await handle(req(good), env, t.f); assert.strictEqual(outcomeOf(t).p_outcome, 'error');
+  t = fake({ ai: () => reply({ content: [] }) }); await handle(req(good), env, t.f); assert.strictEqual(outcomeOf(t).p_outcome, 'unreadable');
+  t = fake({ verdict: 'user_limit' }); await handle(req(good), env, t.f); assert.strictEqual(outcomeOf(t), undefined);
+  // a failing stats call never breaks the reading
+  { const f0 = fake().f; const f = async (u, i) => { if (String(u).endsWith('/finish_receipt_scan')) throw new Error('down'); return f0(u, i); };
+    res = await handle(req(good), env, f); assert.strictEqual(res.status, 200); }
 
   // not signed in -> never reaches the AI
   t = fake({ signedIn: false }); res = await handle(req(good), env, t.f);
