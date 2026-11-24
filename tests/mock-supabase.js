@@ -103,6 +103,9 @@
     },
     get_monthly_summary: function () { return !!(db.email_prefs && db.email_prefs[uid()]); },
     set_monthly_summary: function (a) { db.email_prefs = db.email_prefs || {}; db.email_prefs[uid()] = !!a.enabled; return !!a.enabled; },
+    get_expense_alerts: function () { return !!(db.expense_alerts && db.expense_alerts[uid()]); },
+    set_expense_alerts: function (a) { db.expense_alerts = db.expense_alerts || {}; db.expense_alerts[uid()] = !!a.enabled; return !!a.enabled; },
+    unsubscribe_expense_alerts_by_token: function (a) { db.unsubscribedExpenses = (db.unsubscribedExpenses || []).concat([a.t]); return null; },
     unsubscribe_by_token: function (a) { db.unsubscribed = (db.unsubscribed || []).concat([a.t]); return null; },
     // The mock treats marc@example.com as the app owner.
     is_app_owner: function () { var u = db.users.find(function (x) { return x.id === uid(); }); return !!u && u.email === 'marc@example.com'; },
@@ -188,12 +191,13 @@
         },
         from: function (t) { return new Query(t); },
         rpc: function (name, args) {
-          if (!uid() && name !== 'unsubscribe_by_token') return fail('Not signed in');
+          if (!uid() && name !== 'unsubscribe_by_token' && name !== 'unsubscribe_expense_alerts_by_token') return fail('Not signed in');
           try { var r = rpcs[name](args); save(); return ok(r); } catch (e) { return fail(e.message); }
         },
         // Fake receipt reader. Tests choose what it does with window.__scanMode: 'ok' (default), 'fail', 'limit', 'slow' or 'notreceipt'.
         functions: {
           invoke: function (name, opts) {
+            if (name === 'expense-notify') { window.__notifyCalls = (window.__notifyCalls || []).concat([opts && opts.body]); return Promise.resolve({ data: { sent: 0 }, error: null }); }
             window.__scanCalls = (window.__scanCalls || 0) + 1;
             window.__scanLast = opts && opts.body;
             var mode = window.__scanMode || 'ok';

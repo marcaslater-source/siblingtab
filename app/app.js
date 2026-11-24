@@ -184,6 +184,7 @@
     if (state.recovering) return viewNewPassword();
     if (parts[0] === 'resources') return viewResources();
     if (parts[0] === 'unsubscribe' && parts[1]) return viewUnsubscribe(parts[1]);
+    if (parts[0] === 'unsubscribe-expenses' && parts[1]) return viewUnsubscribe(parts[1], true);
 
     if (!me()) {
       if (parts[0] === 'join' && parts[1]) lsSet(PENDING_INVITE, parts[1]);
@@ -699,6 +700,8 @@
           if (existing && existing.receipt_path && existing.receipt_path !== receiptPath) {
             await sb.storage.from('receipts').remove([existing.receipt_path]);
           }
+          // Tell the family members who opted in. Best effort: never slows down or breaks saving.
+          if (!existing) { try { sb.functions.invoke('expense-notify', { body: { expense_id: savedId } }).catch(function () {}); } catch (e) { /* ignore */ } }
           toast(existing ? 'Expense updated' : 'Expense added');
           await loadFamily(f.id);
           go('#/f/' + f.id + (existing ? '/e/' + savedId : ''));
@@ -1142,15 +1145,16 @@
   // Make a square, small JPEG from any photo the person picks.
   // Free downloads (hosted on the main site) and official CRA pages. Open to everyone.
   // The link in the monthly email. Works without logging in.
-  async function viewUnsubscribe(token) {
+  async function viewUnsubscribe(token, expenseAlerts) {
     render(h('section', { class: 'card narrow' }, h('p', { class: 'muted' }, 'One moment…')));
     var failed = false;
-    try { must(await sb.rpc('unsubscribe_by_token', { t: token })); } catch (e) { failed = true; }
+    try { must(await sb.rpc(expenseAlerts ? 'unsubscribe_expense_alerts_by_token' : 'unsubscribe_by_token', { t: token })); } catch (e) { failed = true; }
     render(h('section', { class: 'card narrow' },
       h('h1', null, failed ? 'Something went wrong' : 'You’re unsubscribed'),
       h('p', null, failed
         ? 'We couldn’t update your email settings. Please try again, or turn the switch off on your Account page.'
-        : 'You won’t get the monthly summary email any more. You can turn it back on any time on your Account page.'),
+        : (expenseAlerts ? 'You won’t get new expense emails any more.' : 'You won’t get the monthly summary email any more.') +
+          ' You can turn it back on any time on your Account page.'),
       h('p', null, h('a', { class: 'btn', href: me() ? '#/account' : '#/login' }, me() ? 'Go to my account' : 'Log in'))));
   }
 
@@ -1313,6 +1317,24 @@
       h('label', { class: 'check', for: 'summary-toggle' }, summaryBox, 'Email me a summary once a month'),
       h('p', { class: 'muted small' }, 'On the 1st of each month: what your family spent last month, who covered what, a simple way to even things out, and any receipts still to add. Only your own family’s numbers, and every email has an unsubscribe link.'));
 
+    // --- New expense emails (off unless you turn it on) ---
+    var alertsOn = false;
+    try { alertsOn = must(await sb.rpc('get_expense_alerts')) === true; } catch (e) { /* not set up yet */ }
+    var alertsBox = h('input', { type: 'checkbox', checked: alertsOn, id: 'alerts-toggle' });
+    alertsBox.addEventListener('change', async function () {
+      var want = alertsBox.checked;
+      alertsBox.disabled = true;
+      try {
+        must(await sb.rpc('set_expense_alerts', { enabled: want }));
+        toast(want ? 'New expense emails are on' : 'New expense emails are off');
+      } catch (err) { alertsBox.checked = !want; toast(friendlyError(err), true); }
+      alertsBox.disabled = false;
+    });
+    var alertsCard = h('section', { class: 'card' },
+      h('h2', null, 'New expense emails'),
+      h('label', { class: 'check', for: 'alerts-toggle' }, alertsBox, 'Email me when someone in my family adds an expense'),
+      h('p', { class: 'muted small' }, 'A short note with who added it, the amount and the category. You won’t get one for expenses you add yourself, and every email has an unsubscribe link.'));
+
     // --- Delete account ---
     var confirmInput = h('input', { type: 'text', autocomplete: 'off', placeholder: 'DELETE' });
     var delBtn = h('button', { class: 'btn danger', type: 'submit' }, 'Delete my account');
@@ -1371,6 +1393,7 @@
         ownerLink,
         legalLinks()),
       summaryCard,
+      alertsCard,
       h('section', { class: 'card' }, h('h2', null, 'Change your password'), pwForm),
       h('section', { class: 'card' }, h('h2', null, 'Change your email'), emailForm),
       h('details', { class: 'card danger-zone' },
