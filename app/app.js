@@ -210,7 +210,8 @@
         if (seq !== routeSeq) return;
         var tab = parts[2] || 'expenses';
         if (tab === 'expenses') return viewExpenses();
-        if (tab === 'add') return viewExpenseForm(null);
+        if (tab === 'add' && !parts[3]) return viewAddChoice();
+        if (tab === 'add') return viewExpenseForm(null, parts[3]);
         if (tab === 'e' && parts[3]) return viewExpenseDetail(parts[3]);
         if (tab === 'edit' && parts[3]) return viewExpenseForm(parts[3]);
         if (tab === 'balances') return viewBalances();
@@ -507,7 +508,11 @@
 
     render(famHeader('expenses'), summary,
       h('a', { class: 'btn primary block', href: '#/f/' + f.id + '/add' }, '+ Add an expense'),
-      list);
+      list,
+      h('a', { class: 'resources-card', href: '#/resources' },
+        h('span', { class: 'rc-ico', 'aria-hidden': 'true' }, '📚'),
+        h('span', null, h('strong', null, 'Free caregiver resources'),
+          h('span', { class: 'muted small' }, 'Tax credit checklist, cost-split spreadsheet and CRA links'))));
   }
 
   // Shrink photos before upload so they're quick on phones and use less storage.
@@ -554,8 +559,33 @@
     return { result: res.data };
   }
 
-  function viewExpenseForm(eid) {
+  // First step of adding an expense: start from a receipt photo (read automatically) or type it in.
+  var pendingPhoto = null;
+  function viewAddChoice() {
+    var f = state.fam;
+    pendingPhoto = null;
+    var pick = h('input', { type: 'file', accept: 'image/*,application/pdf', id: 'receipt-pick', class: 'visually-hidden', onchange: function () {
+      if (!pick.files || !pick.files[0]) return;
+      pendingPhoto = pick.files[0];
+      go('#/f/' + f.id + '/add/photo');
+    } });
+    render(
+      h('p', null, h('a', { href: '#/f/' + f.id }, '‹ Back')),
+      h('section', { class: 'card' },
+        h('h1', null, 'Add an expense'),
+        h('p', { class: 'muted' }, 'How would you like to add it?'),
+        h('div', { class: 'stack' },
+          h('label', { class: 'btn primary block choice', for: 'receipt-pick' }, '📷 Take or upload a photo of the receipt'),
+          pick,
+          h('p', { class: 'muted small' }, 'We’ll read the amount, date and store for you. You just check it and save.'),
+          h('a', { class: 'btn block choice', href: '#/f/' + f.id + '/add/manual' }, '✏️ Enter an expense manually'))));
+  }
+
+  function viewExpenseForm(eid, mode) {
     var f = state.fam, uid = me().id;
+    var fromPhoto = !eid && mode === 'photo';
+    var startFile = fromPhoto ? pendingPhoto : null;
+    if (fromPhoto && !startFile) return go('#/f/' + f.id + '/add');
     var existing = eid ? f.expenses.find(function (e) { return e.id === eid; }) : null;
     if (eid && !existing) return go('#/f/' + f.id);
     if (existing && existing.created_by !== uid) { toast('Only the person who added this expense can change it.', true); return go('#/f/' + f.id + '/e/' + eid); }
@@ -621,9 +651,15 @@
       updatePreview();
       scanNote.textContent = '✨ Filled in from your receipt. Please check it before saving.';
     } });
+    // Photo-first path: the chosen photo is attached and read straight away.
+    if (startFile) {
+      try { var dt = new DataTransfer(); dt.items.add(startFile); photo.files = dt.files; } catch (e) { /* older browser: person re-picks below */ }
+      if (photo.files && photo.files[0]) setTimeout(function () { photo.dispatchEvent(new Event('change')); }, 0);
+    }
     var removeReceipt = existing && existing.receipt_path ? h('input', { type: 'checkbox' }) : null;
     var btn = h('button', { class: 'btn primary', type: 'submit' }, existing ? 'Save changes' : 'Add expense');
 
+    var attached = startFile && photo.files && photo.files[0];
     var form = h('form', {
       class: 'stack', onsubmit: async function (ev) {
         ev.preventDefault();
@@ -666,14 +702,16 @@
       field('What was it for?', desc),
       field('Who paid?', paidBy),
       h('fieldset', { class: 'field' }, h('legend', null, 'Shared by'), shareBoxes.map(function (s) { return s.el; }), splitPreview),
-      field(existing && existing.receipt_path ? 'Replace receipt photo' : 'Receipt photo (optional)', photo,
+      attached ? h('p', { class: 'muted small' }, '🧾 Receipt photo attached. ', h('a', { href: '#/f/' + f.id + '/add' }, 'Choose a different one')) : null,
+      attached ? h('div', { hidden: true }, photo) : field(existing && existing.receipt_path ? 'Replace receipt photo' : 'Receipt photo (optional)', photo,
         'Keep receipts for medical expenses: you may need them at tax time. We’ll try to fill in the details for you.'),
-      scanNote,
+      attached ? null : scanNote,
       removeReceipt ? h('label', { class: 'check' }, removeReceipt, ' Remove the current receipt') : null,
       h('div', { class: 'actions' }, btn, h('a', { class: 'btn', href: existing ? '#/f/' + f.id + '/e/' + existing.id : '#/f/' + f.id }, 'Cancel')));
 
-    render(h('section', { class: 'card' }, h('h1', null, existing ? 'Edit expense' : 'Add an expense'), form));
-    if (!existing) amount.focus();
+    render(h('section', { class: 'card' }, h('h1', null, existing ? 'Edit expense' : 'Add an expense'),
+      attached ? h('div', { class: 'scan-top' }, scanNote) : null, form));
+    if (!existing && !attached) amount.focus();
   }
 
   async function viewExpenseDetail(eid) {
