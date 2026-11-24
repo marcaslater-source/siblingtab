@@ -1,6 +1,6 @@
 // Lets SiblingTab open quickly and be installed to the home screen.
 // Family data is never cached here: it always comes fresh from the database.
-var CACHE = 'siblingtab-v13';
+var CACHE = 'siblingtab-v14';
 var SHELL = ['./', 'index.html', 'styles.css?v=13', 'config.js?v=13', 'logic.js?v=13', 'app.js?v=13',
   'vendor/supabase-2.118.0.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png'];
 
