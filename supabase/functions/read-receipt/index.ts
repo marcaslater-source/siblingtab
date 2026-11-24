@@ -42,7 +42,7 @@ const PROMPT = 'Read this receipt for a family keeping track of care costs for a
   'transport = taxi, parking, gas, transit; groceries = food and meals; home = repairs, renovation, utilities; ' +
   'equipment = mobility aids, medical supplies, devices; other = anything else. ' +
   'Give the final total actually paid. Dates are Canadian: if day/month is ambiguous, prefer the reading that is not in the future. ' +
-  'Never guess: use null when unsure. Call record_receipt.';
+  'Never guess: use null when unsure. Respond only by calling the record_receipt tool.';
 
 // Turns the model's answer into safe, clean fields. Anything doubtful becomes null so the app leaves that box empty.
 export function cleanResult(r: any, todayIso: string) {
@@ -116,7 +116,7 @@ export async function handle(req: Request, env: Record<string, string | undefine
         model: env.RECEIPT_MODEL || 'claude-sonnet-5-5',
         max_tokens: 300,
         tools: [TOOL],
-        tool_choice: { type: 'tool', name: 'record_receipt' },
+        tool_choice: { type: 'auto' }, // this model rejects a forced tool; the prompt tells it to call record_receipt
         messages: [{ role: 'user', content: [
           { type: 'image', source: { type: 'base64', media_type: type, data: image } },
           { type: 'text', text: PROMPT }

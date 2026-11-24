@@ -27,6 +27,7 @@ const assert = require('assert');
   const sent = JSON.parse(t.calls[2].init.body);
   assert.strictEqual(sent.model, 'claude-sonnet-5-5'); assert.ok(sent.max_tokens <= 300);
   assert.strictEqual(t.calls[2].init.headers['x-api-key'], 'sk-test');
+  assert.notStrictEqual(sent.tool_choice.type, 'tool'); assert.notStrictEqual(sent.tool_choice.type, 'any'); // this model rejects forced tool use
 
   // the outcome is recorded (counts only, nothing about the receipt)
   const outcomeOf = (tt) => { const c = tt.calls.find(x => x.url.endsWith('/finish_receipt_scan')); return c && JSON.parse(c.init.body); };
