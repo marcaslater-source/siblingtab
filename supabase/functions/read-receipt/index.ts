@@ -123,8 +123,15 @@ export async function handle(req: Request, env: Record<string, string | undefine
         ] }]
       })
     });
-  } catch { await finish(fetchFn, url, svc, user.id, 'error'); return json({ error: 'unavailable' }, 502); }
-  if (!res.ok) { await finish(fetchFn, url, svc, user.id, 'error'); return json({ error: 'unavailable' }, 502); }
+  } catch (e) { console.error('anthropic fetch failed:', String(e)); await finish(fetchFn, url, svc, user.id, 'error'); return json({ error: 'unavailable' }, 502); }
+  if (!res.ok) {
+    // Log only the status and the API's error type/message (never the key or the image) so failures can be diagnosed.
+    let why = '';
+    try { const e = await res.json(); why = `${e?.error?.type || ''}: ${String(e?.error?.message || '').slice(0, 200)}`; } catch { /* ignore */ }
+    console.error('anthropic error', res.status, why);
+    await finish(fetchFn, url, svc, user.id, 'error');
+    return json({ error: 'unavailable' }, 502);
+  }
   const out = await res.json();
   const block = Array.isArray(out.content) ? out.content.find((b: any) => b.type === 'tool_use') : null;
   if (!block) { await finish(fetchFn, url, svc, user.id, 'unreadable'); return json({ error: 'unreadable' }, 422); }
