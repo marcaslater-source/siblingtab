@@ -537,19 +537,20 @@
     if (!/^image\//.test(file.type)) return null;
     try {
       var bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
-      var scale = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
+      var scale = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
       var c = document.createElement('canvas');
       c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
       c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-      var url = c.toDataURL('image/jpeg', 0.72);
+      var url = c.toDataURL('image/jpeg', 0.7);
       return { data: url.split(',')[1], type: 'image/jpeg' };
     } catch (e) { return null; }
   }
 
   // Asks the app's receipt reader (optional: any problem just means "type it in yourself").
-  async function readReceipt(file) {
+  async function readReceipt(file, onSending) {
     var small = await prepareForReading(file);
     if (!small) return { quiet: true };
+    if (onSending) onSending();
     var res = await sb.functions.invoke('read-receipt', { body: { image: small.data, media_type: small.type } });
     if (res.error) {
       var code = '';
@@ -628,28 +629,40 @@
       p[1].addEventListener('input', function () { touched[p[0]] = true; });
       p[1].addEventListener('change', function () { touched[p[0]] = true; });
     });
-    var scanNote = h('small', { class: 'muted scan-note', role: 'status' });
-    var scanSeq = 0;
+    var scanNote = h('small', { class: 'muted scan-note', role: 'status', 'aria-live': 'polite' });
+    var scanSeq = 0, scanTimer = null;
+    // Shows a message; busy=true adds a small spinner so it is clear something is happening.
+    function setScan(text, busy) {
+      scanNote.replaceChildren();
+      if (busy) scanNote.append(h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' ');
+      scanNote.append(text);
+    }
     var photo = h('input', { type: 'file', accept: 'image/*,application/pdf', onchange: async function () {
       var file = photo.files && photo.files[0], seq = ++scanSeq;
-      scanNote.textContent = '';
+      clearTimeout(scanTimer);
+      setScan('', false);
       if (!file || !/^image\//.test(file.type)) return;
-      scanNote.textContent = '✨ Reading your receipt…';
+      setScan('Getting your photo ready…', true);
       var out;
-      try { out = await readReceipt(file); } catch (e) { out = { error: 'unavailable' }; }
+      // Staged text so a slow connection never looks frozen.
+      scanTimer = setTimeout(function () { if (seq === scanSeq) setScan('Reading your receipt…', true); }, 700);
+      var slowTimer = setTimeout(function () { if (seq === scanSeq) setScan('Still reading… a few more seconds. You can also start typing.', true); }, 8000);
+      try { out = await readReceipt(file, function () { if (seq === scanSeq) { clearTimeout(scanTimer); setScan('Reading your receipt…', true); } }); } catch (e) { out = { error: 'unavailable' }; }
+      clearTimeout(slowTimer); clearTimeout(scanTimer);
       if (seq !== scanSeq) return; // a newer photo was chosen
-      if (out.quiet) { scanNote.textContent = ''; return; }
-      if (out.error === 'daily_limit') { scanNote.textContent = 'You’ve used today’s automatic readings. Please fill in the details below.'; return; }
-      if (out.error || !out.result) { scanNote.textContent = 'Couldn’t read this receipt automatically. No problem, just fill in the details below.'; return; }
+      if (out.quiet) { setScan('', false); return; }
+      if (out.error === 'daily_limit') { setScan('You’ve used today’s automatic readings. Your photo is still saved with the expense, so please fill in the details below.', false); return; }
+      if (out.error || !out.result) { setScan('We couldn’t read this one automatically. Your photo is still attached, so please fill in the details below.', false); return; }
+      if (out.result.found === false) { setScan('That doesn’t look like a receipt. You can choose a different photo, or fill in the details below.', false); return; }
       var fill = L.receiptFill(out.result, touched, todayIso());
       var n = Object.keys(fill).length;
-      if (!n) { scanNote.textContent = 'Couldn’t read this receipt clearly. Please fill in the details below.'; return; }
+      if (!n) { setScan('We couldn’t read this receipt clearly. Your photo is still attached, so please fill in the details below.', false); return; }
       if (fill.amount) amount.value = fill.amount;
       if (fill.date) date.value = fill.date;
       if (fill.cat) cat.value = fill.cat;
       if (fill.desc) desc.value = fill.desc;
       updatePreview();
-      scanNote.textContent = '✨ Filled in from your receipt. Please check it before saving.';
+      setScan('✨ Filled in from your receipt. Please check it before saving.', false);
     } });
     // Photo-first path: the chosen photo is attached and read straight away.
     if (startFile) {

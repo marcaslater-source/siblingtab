@@ -58,6 +58,13 @@ export function cleanResult(r: any, todayIso: string) {
   return { found: true, amount, date, description, category };
 }
 
+// Lets a background job (the stats update) finish after the answer is sent, so the person doesn't wait for it.
+function background(p: Promise<unknown>) {
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt && typeof rt.waitUntil === 'function') rt.waitUntil(p);
+  return p;
+}
+
 // Best effort: tell the database how this reading ended (for the owner's counts). Never blocks the answer.
 async function finish(fetchFn: typeof fetch, url: string, svc: string, user: string, outcome: string) {
   try {
@@ -123,22 +130,22 @@ export async function handle(req: Request, env: Record<string, string | undefine
         ] }]
       })
     });
-  } catch (e) { console.error('anthropic fetch failed:', String(e)); await finish(fetchFn, url, svc, user.id, 'error'); return json({ error: 'unavailable' }, 502); }
+  } catch (e) { console.error('anthropic fetch failed:', String(e)); background(finish(fetchFn, url, svc, user.id, 'error')); return json({ error: 'unavailable' }, 502); }
   if (!res.ok) {
     // Log only the status and the API's error type/message (never the key or the image) so failures can be diagnosed.
     let why = '';
     try { const e = await res.json(); why = `${e?.error?.type || ''}: ${String(e?.error?.message || '').slice(0, 200)}`; } catch { /* ignore */ }
     console.error('anthropic error', res.status, why);
-    await finish(fetchFn, url, svc, user.id, 'error');
+    background(finish(fetchFn, url, svc, user.id, 'error'));
     return json({ error: 'unavailable' }, 502);
   }
   const out = await res.json();
   const block = Array.isArray(out.content) ? out.content.find((b: any) => b.type === 'tool_use') : null;
-  if (!block) { await finish(fetchFn, url, svc, user.id, 'unreadable'); return json({ error: 'unreadable' }, 422); }
+  if (!block) { background(finish(fetchFn, url, svc, user.id, 'unreadable')); return json({ error: 'unreadable' }, 422); }
 
   const today = new Date().toISOString().slice(0, 10);
   const result = cleanResult(block.input, today);
-  await finish(fetchFn, url, svc, user.id, result.found ? 'read' : 'not_receipt');
+  background(finish(fetchFn, url, svc, user.id, result.found ? 'read' : 'not_receipt'));
   return json(result);
 }
 

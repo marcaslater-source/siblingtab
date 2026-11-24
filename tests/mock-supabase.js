@@ -191,12 +191,14 @@
           if (!uid() && name !== 'unsubscribe_by_token') return fail('Not signed in');
           try { var r = rpcs[name](args); save(); return ok(r); } catch (e) { return fail(e.message); }
         },
-        // Fake receipt reader. Tests choose what it does with window.__scanMode: 'ok' (default), 'fail' or 'limit'.
+        // Fake receipt reader. Tests choose what it does with window.__scanMode: 'ok' (default), 'fail', 'limit', 'slow' or 'notreceipt'.
         functions: {
           invoke: function (name, opts) {
             window.__scanCalls = (window.__scanCalls || 0) + 1;
             window.__scanLast = opts && opts.body;
             var mode = window.__scanMode || 'ok';
+            if (mode === 'slow') return new Promise(function (res) { setTimeout(function () { res({ data: { found: true, amount: 47.3, date: '2026-10-05', description: 'Shoppers Drug Mart – prescription', category: 'medication' }, error: null }); }, 1500); });
+            if (mode === 'notreceipt') return Promise.resolve({ data: { found: false }, error: null });
             if (mode === 'fail') return Promise.resolve({ data: null, error: { context: { json: function () { return Promise.reject(new Error('x')); } } } });
             if (mode === 'limit') return Promise.resolve({ data: null, error: { context: { json: function () { return Promise.resolve({ error: 'daily_limit' }); } } } });
             return Promise.resolve({ data: { found: true, amount: 47.3, date: '2026-10-05', description: 'Shoppers Drug Mart – prescription', category: 'medication' }, error: null });
