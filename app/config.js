@@ -3,5 +3,7 @@
 // NEVER put the "service_role" / "secret" key here.
 window.SIBLINGTAB_CONFIG = {
   supabaseUrl: 'https://oeoztluulroglfbvwyon.supabase.co',
-  supabaseAnonKey: 'sb_publishable_4aPpt4-26ewsdMeoTjguCA_qJdI-Tqv'
+  supabaseAnonKey: 'sb_publishable_4aPpt4-26ewsdMeoTjguCA_qJdI-Tqv',
+  // Plan card + Start free trial button on the Family tab. Keep false until live Stripe keys are in place (see STRIPE.md).
+  billingEnabled: false
 };

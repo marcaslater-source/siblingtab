@@ -892,7 +892,11 @@
     var famInput = h('input', { type: 'text', maxlength: '80', required: true, value: f.name });
     var famBtn = h('button', { class: 'btn', type: 'submit' }, 'Save');
 
+    var planCard = h('section', { class: 'card', hidden: true });
+    loadPlanCard(f, planCard);
+
     render(famHeader('family'),
+      planCard,
       h('section', { class: 'card' },
         h('h2', null, 'Members'),
         h('ul', { class: 'list' }, activeMembers().map(function (m) {
@@ -929,6 +933,39 @@
             } catch (err) { toast(friendlyError(err), true); busy(famBtn, false); }
           }
         }, field('Family space name', famInput), famBtn)));
+  }
+
+  // Plan and billing (Stripe). Hidden until the billing table exists, so the app works before billing is set up.
+  async function loadPlanCard(f, card) {
+    if (!(window.SIBLINGTAB_CONFIG && window.SIBLINGTAB_CONFIG.billingEnabled)) return;
+    try {
+      var row = must(await sb.from('family_billing').select('status, trial_end, current_period_end, cancel_at_period_end').eq('family_id', f.id).maybeSingle());
+      var st = row ? row.status : 'none';
+      var isOwner = f.members.some(function (m) { return m.user_id === me().id && m.role === 'owner'; });
+      var active = ['trialing', 'active', 'past_due'].indexOf(st) !== -1;
+      var text = {
+        none: 'Free while SiblingTab is in its early version. A paid plan, $8 CAD a month for your whole family, comes with a 14-day free trial.',
+        trialing: 'Free trial until ' + (row && row.trial_end ? niceDate(row.trial_end.slice(0, 10)) : 'soon') + '. You can cancel any time before then and you won’t be charged.',
+        active: 'Your family plan is active.' + (row && row.cancel_at_period_end ? ' It ends ' + niceDate(row.current_period_end.slice(0, 10)) + '.' : ''),
+        past_due: 'The last payment didn’t go through. Please update the card.',
+        canceled: 'Your family plan has ended.'
+      }[st] || 'Your plan: ' + st + '.';
+      var btn = null;
+      if (isOwner) {
+        var action = active ? 'portal' : 'checkout';
+        btn = h('button', { class: 'btn' + (active ? '' : ' primary'), type: 'button', onclick: async function () {
+          busy(btn, true, 'One moment…');
+          try {
+            var res = await sb.functions.invoke('stripe-checkout', { body: { family_id: f.id, action: action } });
+            if (res.error || !res.data || !res.data.url) throw new Error('Billing isn’t available right now. Please try again later.');
+            window.location.href = res.data.url;
+          } catch (err) { toast(friendlyError(err), true); busy(btn, false); }
+        } }, active ? 'Manage billing' : 'Start free trial');
+      }
+      card.replaceChildren(h('h2', null, 'Plan'), h('p', null, text),
+        btn || h('p', { class: 'muted small' }, 'The person who started this space manages the plan.'));
+      card.hidden = false;
+    } catch (e) { /* billing not set up yet: show nothing */ }
   }
 
   // ---------------------------------------------------------------------------
