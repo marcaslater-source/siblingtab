@@ -60,13 +60,19 @@ const SHOTS = process.argv[2];
   // Marc logs a solo expense first
   await page.getByRole('link', { name: 'Expenses' }).click();
   await page.getByText('No expenses yet.').waitFor(); await shot('empty');
-  await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('heading', { name: 'Add an expense' }).waitFor();
+  await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('link', { name: /Enter an expense manually/ }).click(); await page.getByLabel('Amount (CAD)').waitFor();
   await page.getByLabel('Amount (CAD)').fill('30');
   await page.getByLabel('What was it for?').fill('Hospital parking');
   await page.getByLabel('Category').selectOption('transport');
   await page.getByRole('button', { name: 'Add expense' }).click();
   await page.getByText('Hospital parking').waitFor();
   step('Marc adds an expense');
+  // Resources are easy to find: a card on the Expenses home, not just a link under Account
+  await page.getByRole('link', { name: /Free caregiver resources/ }).click();
+  await page.getByRole('heading', { name: 'Caregiver resources' }).waitFor();
+  await page.getByRole('link', { name: '‹ Back' }).click();
+  await page.getByText('Hospital parking').waitFor();
+  step('resources card on the home screen opens the resources page');
 
   await page.getByRole('link', { name: 'Account' }).click();
   await page.getByRole('button', { name: 'Log out' }).click();
@@ -89,7 +95,7 @@ const SHOTS = process.argv[2];
   step('invited sibling sees the welcome walkthrough, finishes it');
 
   // Julie adds a pharmacy expense with a receipt, split between both
-  await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('heading', { name: 'Add an expense' }).waitFor();
+  await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('link', { name: /Enter an expense manually/ }).click(); await page.getByLabel('Amount (CAD)').waitFor();
   const boxes = page.locator('fieldset .check input'); if (await boxes.count() !== 2) throw new Error('expected 2 members');
   await page.getByLabel('Amount (CAD)').fill('$90.01');
   await page.getByLabel('What was it for?').fill('Shoppers – prescriptions');
@@ -101,7 +107,7 @@ const SHOTS = process.argv[2];
 
   // Automatic receipt reading: fills empty boxes, never overwrites typing, fails gracefully
   const rpath = require('path').join(__dirname, 'receipt.png');
-  await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('heading', { name: 'Add an expense' }).waitFor();
+  await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('link', { name: /Enter an expense manually/ }).click(); await page.getByLabel('Amount (CAD)').waitFor();
   await page.locator('input[type=file]').setInputFiles(rpath);
   await page.getByText('Filled in from your receipt').waitFor(); await shot('receipt-read');
   if (await page.getByLabel('Amount (CAD)').inputValue() !== '47.30') throw new Error('amount not filled');
@@ -110,6 +116,19 @@ const SHOTS = process.argv[2];
   const sent = await page.evaluate(() => window.__scanLast);
   if (!sent || sent.media_type !== 'image/jpeg' || !sent.image || sent.image.length > 1500000) throw new Error('bad image sent to reader');
   step('receipt photo pre-fills amount, date and description');
+
+  // Photo-first path: choose the photo up front, land on a pre-filled form, only review and save
+  await page.getByRole('link', { name: 'Cancel' }).click(); await page.getByRole('link', { name: '+ Add an expense' }).click();
+  await page.getByRole('heading', { name: 'Add an expense' }).waitFor();
+  await page.getByText('Take or upload a photo of the receipt').waitFor();
+  await page.getByRole('link', { name: /Enter an expense manually/ }).waitFor(); await shot('add-choice');
+  await page.locator('#receipt-pick').setInputFiles(rpath);
+  await page.getByText('Filled in from your receipt').waitFor(); await shot('photo-first');
+  if (await page.getByLabel('Amount (CAD)').inputValue() !== '47.30') throw new Error('photo-first amount not filled');
+  if (!(await page.getByRole('button', { name: 'Add expense' }).isVisible())) throw new Error('save button missing');
+  await page.getByRole('link', { name: 'Cancel' }).click(); // (not saved here, so later balance checks stay as they are)
+  step('photo-first: pick photo, land on a pre-filled form ready to review and save');
+  await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('link', { name: /Enter an expense manually/ }).click(); await page.getByLabel('Amount (CAD)').waitFor();
   // reader fails: manual entry still works and the person is told kindly
   await page.evaluate(() => { window.__scanMode = 'fail'; });
   await page.locator('input[type=file]').setInputFiles([]);
@@ -283,7 +302,7 @@ const SHOTS = process.argv[2];
   const owe4 = (await page.locator('li.owe').innerText()).replace(/\s+/g, ' ');
   if (!owe4.includes('Former member')) throw new Error('former member wrong: ' + owe4);
   await page.getByRole('link', { name: 'Expenses' }).click();
-  await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('heading', { name: 'Add an expense' }).waitFor();
+  await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('link', { name: /Enter an expense manually/ }).click(); await page.getByLabel('Amount (CAD)').waitFor();
   if (await page.locator('fieldset .check input').count() !== 1) throw new Error('former member still pickable');
   step('deleted account shows as Former member, cannot be picked for new expenses');
 

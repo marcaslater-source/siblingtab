@@ -191,3 +191,13 @@ form.inline .field { flex: 1; }
 .link-btn { background: none; border: 0; padding: 0; font: inherit; color: var(--teal); text-decoration: underline; cursor: pointer; }
 .tour-actions .btn[hidden] { display: none; }
 .scan-note { display: block; min-height: 1.2em; }
+
+.choice { text-align: center; justify-content: center; font-size: 1.05rem; padding: 16px; cursor: pointer; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.scan-top { margin: 0 0 12px; font-size: 1.05rem; }
+.scan-top .scan-note { font-size: 1rem; }
+
+.resources-card { display: flex; align-items: center; gap: 14px; margin: 18px 0 8px; padding: 14px 16px; border: 1px solid var(--line, #e4ddd2); border-radius: 14px; background: #fff; text-decoration: none; color: inherit; }
+.resources-card strong { display: block; color: var(--teal, #1f5c57); }
+.resources-card .rc-ico { font-size: 1.6rem; }
+.resources-card:hover, .resources-card:focus-visible { border-color: #1f5c57; }

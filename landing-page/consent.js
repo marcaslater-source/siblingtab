@@ -93,6 +93,12 @@
     document.addEventListener('click', function (e) {
       var ev = e.target.closest && e.target.closest('[data-ga-event]');
       if (ev) window.stTrack(ev.getAttribute('data-ga-event'), { link_location: ev.getAttribute('data-ga-where') || '' });
+      // Free downloads (the checklist PDF and the cost-split spreadsheet): event "resource_download" with the file name.
+      var a = e.target.closest && e.target.closest('a[href*="/downloads/"], a[href^="downloads/"]');
+      if (a) {
+        var file = (a.getAttribute('href') || '').split('?')[0].split('/').pop();
+        window.stTrack('resource_download', { file_name: file, file_extension: (file.split('.')[1] || ''), link_location: location.pathname });
+      }
     });
 
     document.addEventListener('click', function (e) {
