@@ -130,10 +130,24 @@ const SHOTS = process.argv[2];
   step('photo-first: pick photo, land on a pre-filled form ready to review and save');
   await page.getByRole('link', { name: '+ Add an expense' }).click(); await page.getByRole('link', { name: /Enter an expense manually/ }).click(); await page.getByLabel('Amount (CAD)').waitFor();
   // reader fails: manual entry still works and the person is told kindly
+  // while reading: a spinner and "Reading your receipt…" are shown
+  await page.evaluate(() => { window.__scanMode = 'slow'; });
+  await page.locator('input[type=file]').setInputFiles([]);
+  await page.locator('input[type=file]').setInputFiles(rpath);
+  await page.getByText('Reading your receipt…').waitFor();
+  if (await page.locator('.scan-note .spinner').count() !== 1) throw new Error('no spinner while reading');
+  await page.getByText('Filled in from your receipt').waitFor();
+  if (await page.locator('.scan-note .spinner').count() !== 0) throw new Error('spinner left behind');
+  step('progress text and spinner show while reading, then clear');
+  await page.evaluate(() => { window.__scanMode = 'notreceipt'; });
+  await page.locator('input[type=file]').setInputFiles([]);
+  await page.locator('input[type=file]').setInputFiles(rpath);
+  await page.getByText('doesn’t look like a receipt').waitFor();
+  step('not-a-receipt gets a friendly message');
   await page.evaluate(() => { window.__scanMode = 'fail'; });
   await page.locator('input[type=file]').setInputFiles([]);
   await page.locator('input[type=file]').setInputFiles(rpath);
-  await page.getByText('Couldn’t read this receipt automatically').waitFor();
+  await page.getByText('We couldn’t read this one automatically').waitFor();
   step('reader failure shows a gentle message');
   await page.evaluate(() => { window.__scanMode = 'limit'; });
   await page.locator('input[type=file]').setInputFiles([]);

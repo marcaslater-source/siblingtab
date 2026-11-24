@@ -201,3 +201,7 @@ form.inline .field { flex: 1; }
 .resources-card strong { display: block; color: var(--teal, #1f5c57); }
 .resources-card .rc-ico { font-size: 1.6rem; }
 .resources-card:hover, .resources-card:focus-visible { border-color: #1f5c57; }
+
+.spinner { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; border: 2px solid #cfe3e0; border-top-color: #1f5c57; border-radius: 50%; animation: st-spin .8s linear infinite; }
+@keyframes st-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
