@@ -967,6 +967,9 @@
         h('p', null, h('a', { href: '#/' }, '‹ Back'))));
     }
     var d = res.data || {};
+    // Receipt counts are a separate call so the page still loads if that SQL has not been run yet.
+    var rr = await sb.rpc('owner_receipt_stats');
+    var R = rr.error ? null : (rr.data || {});
     var A = d.accounts || {}, F = d.families || {}, M = d.members || {}, E = d.expenses || {}, P = d.paybacks || {};
     var pct = function (a, b) { return b ? Math.round(100 * a / b) + '%' : '–'; };
     function tile(label, value, sub) {
@@ -999,7 +1002,8 @@
           tile('Expenses logged', E.total, E.new_7d + ' in 7 days · ' + E.new_30d + ' in 30'),
           tile('With a receipt photo', E.with_receipt, pct(E.with_receipt, E.total) + ' of expenses'),
           tile('Total tracked', L.formatCents(E.total_cents || 0), 'across all families'),
-          tile('Paybacks recorded', P.total, P.new_30d + ' in 30 days'))),
+          tile('Paybacks recorded', P.total, P.new_30d + ' in 30 days')),
+        R ? receiptStatsBlock(R, tile, pct) : null),
       h('section', { class: 'card' },
         h('h2', null, 'Last 8 weeks'),
         h('table', { class: 'stats-table' },
@@ -1013,6 +1017,34 @@
                 h('span', { class: 'bar', style: 'width:' + Math.round(100 * w.expenses / maxExp) + '%' }),
                 h('span', null, String(w.expenses)))));
           })))));
+  }
+
+  // Receipt counts for the owner stats page. Aggregate numbers only, computed in the database.
+  function receiptStatsBlock(R, tile, pct) {
+    var U = R.uploaded || {}, D = R.readings || {}, daily = R.daily || [];
+    var tried = (D.read_ok || 0) + (D.not_receipt || 0) + (D.failed || 0);
+    var maxDay = Math.max.apply(null, [1].concat(daily.map(function (x) { return x.readings; })));
+    return h('div', null,
+      h('h2', null, 'Receipts'),
+      h('div', { class: 'stats' },
+        tile('Receipts uploaded', U.total, U.new_7d + ' in 7 days · ' + U.new_30d + ' in 30'),
+        tile('Auto-reads', D.total, D.today + ' in the last 24 hours · ' + D.new_30d + ' in 30 days'),
+        tile('Read successfully', D.read_ok, pct(D.read_ok, tried) + ' of finished readings'),
+        tile('Read failures', D.failed, (D.not_receipt || 0) + ' were not a receipt'),
+        tile('Estimated AI cost', '$' + Number(D.est_cost_usd_30d || 0).toFixed(2),
+          'last 30 days (US$) · $' + Number(D.est_cost_usd_total || 0).toFixed(2) + ' in total · about $' + D.cost_per_reading_usd + ' each')),
+      h('p', { class: 'muted small' }, 'Readings are kept for 90 days. ' + (D.unknown || 0) + ' have no result recorded (older ones). ' +
+        'The cost is a rough guess, not your bill: check the Anthropic Console for the real number.'),
+      daily.length ? h('table', { class: 'stats-table' },
+        h('thead', null, h('tr', null, h('th', null, 'Day'), h('th', null, 'Auto-reads'), h('th', null, 'Failed'))),
+        h('tbody', null, daily.slice().reverse().map(function (x) {
+          return h('tr', null,
+            h('td', null, niceDate(x.day)),
+            h('td', null, h('span', { class: 'bar-cell' },
+              h('span', { class: 'bar', style: 'width:' + Math.round(100 * x.readings / maxDay) + '%' }),
+              h('span', null, String(x.readings)))),
+            h('td', null, String(x.failed)));
+        }))) : null);
   }
 
   // ---------------------------------------------------------------------------

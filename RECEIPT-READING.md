@@ -25,3 +25,11 @@ Until steps above are done the app still works: the reader just reports "couldn'
 
 ## Tests
 `node tests/logic.test.js`, `node --experimental-strip-types tests/read-receipt.test.js` (Node 22+), and the browser test in `tests/e2e-playwright.js`.
+
+## Receipt counts on the App stats page
+Run `supabase/migrations/009_receipt_stats.sql` once (after 007). The owner-only App stats page then shows a
+"Receipts" section: receipts uploaded, auto-reads, how many worked or failed, a 14-day table, and a rough cost
+estimate (US$0.01 per reading, edit `cost_per_reading` in the SQL). These are counts only, computed from the
+database; nothing is sent to Google Analytics or any other service. Each reading is logged as who/when/how it
+ended (never the image or what was read) and kept for 90 days. Re-deploy the `read-receipt` function so it
+reports how each reading ended; until then the page shows older readings as "no result recorded".

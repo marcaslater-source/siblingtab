@@ -120,6 +120,14 @@
         people_adding_7d: 2, people_adding_30d: 2,
         weekly: [{ week: '2026-11-02', accounts: 0, families: 0, expenses: 0 }, { week: '2026-11-09', accounts: db.users.length, families: db.families.length, expenses: db.expenses.length }] };
     },
+    owner_receipt_stats: function () {
+      if (!rpcs.is_app_owner()) throw new Error('Not allowed');
+      var n = db.expenses.filter(function (e) { return e.receipt_path; }).length;
+      return { uploaded: { total: n, new_7d: n, new_30d: n },
+        readings: { total: 7, read_ok: 4, not_receipt: 1, failed: 2, unknown: 0, today: 3, new_7d: 7, new_30d: 7,
+          est_cost_usd_30d: 0.07, est_cost_usd_total: 0.07, cost_per_reading_usd: 0.01 },
+        daily: [{ day: '2026-11-22', readings: 4, failed: 1 }, { day: '2026-11-23', readings: 3, failed: 1 }] };
+    },
     families_deleted_with_me: function () {
       return db.families.filter(function (f) {
         return isMember(f.id) && !db.family_members.some(function (m) { return m.family_id === f.id && m.user_id !== uid() && !m.left_at; });

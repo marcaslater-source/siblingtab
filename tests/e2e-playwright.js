@@ -249,7 +249,10 @@ const SHOTS = process.argv[2];
   await page.getByRole('heading', { name: 'App stats' }).waitFor(); await shot('stats');
   const st = (await page.locator('main').innerText()).replace(/\s+/g, ' ');
   if (!st.includes('Accounts 2') || !st.includes('With a receipt photo 1')) throw new Error('stats wrong: ' + st);
-  step('owner sees app stats');
+  for (const want of ['Receipts uploaded 1', 'Auto-reads 7', 'Read successfully 4', 'Read failures 2', 'Estimated AI cost $0.07']) {
+    if (!st.includes(want)) throw new Error('receipt stats missing "' + want + '": ' + st);
+  }
+  step('owner sees app stats and receipt counts');
 
   // Julie deletes her account; Marc's records keep her as "Former member"
   await page.getByRole('link', { name: 'Account' }).click();
