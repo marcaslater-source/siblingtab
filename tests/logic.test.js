@@ -64,3 +64,14 @@ assert.deepStrictEqual(L.taxSummary(mem, tx, 2024), []);
 L.CATEGORIES.forEach(c => assert.ok(L.TAX_GROUPS.some(g => g.cats.includes(c[0])), c[0]));
 
 console.log('logic tests passed');
+
+// Receipt reading: what gets pre-filled
+{
+  const r = { found: true, amount: 47.3, date: '2026-10-05', description: 'Shoppers – pills', category: 'medication' };
+  assert.deepStrictEqual(L.receiptFill(r, {}, '2026-11-17'), { amount: '47.30', date: '2026-10-05', desc: 'Shoppers – pills', cat: 'medication' });
+  assert.deepStrictEqual(L.receiptFill(r, { amount: true, desc: true }, '2026-11-17'), { date: '2026-10-05', cat: 'medication' });
+  assert.deepStrictEqual(L.receiptFill({ found: false }, {}, '2026-11-17'), {});
+  assert.deepStrictEqual(L.receiptFill(null, {}, '2026-11-17'), {});
+  assert.deepStrictEqual(L.receiptFill({ amount: -3, date: '2030-01-01', category: 'bogus', description: '  ' }, {}, '2026-11-17'), {});
+  console.log('receipt fill ok');
+}

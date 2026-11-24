@@ -527,6 +527,33 @@
     return { blob: file, ext: ext, type: file.type };
   }
 
+  // A smaller copy just for reading (never stored). Returns null if the browser can't make one.
+  async function prepareForReading(file) {
+    if (!/^image\//.test(file.type)) return null;
+    try {
+      var bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      var scale = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
+      var c = document.createElement('canvas');
+      c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      var url = c.toDataURL('image/jpeg', 0.72);
+      return { data: url.split(',')[1], type: 'image/jpeg' };
+    } catch (e) { return null; }
+  }
+
+  // Asks the app's receipt reader (optional: any problem just means "type it in yourself").
+  async function readReceipt(file) {
+    var small = await prepareForReading(file);
+    if (!small) return { quiet: true };
+    var res = await sb.functions.invoke('read-receipt', { body: { image: small.data, media_type: small.type } });
+    if (res.error) {
+      var code = '';
+      try { code = (await res.error.context.json()).error; } catch (e) { /* ignore */ }
+      return { error: code || 'unavailable' };
+    }
+    return { result: res.data };
+  }
+
   function viewExpenseForm(eid) {
     var f = state.fam, uid = me().id;
     var existing = eid ? f.expenses.find(function (e) { return e.id === eid; }) : null;
@@ -565,7 +592,35 @@
     shareBoxes.forEach(function (s) { s.cb.addEventListener('change', updatePreview); });
     updatePreview();
 
-    var photo = h('input', { type: 'file', accept: 'image/*,application/pdf' });
+    // Automatic receipt reading: fills empty boxes after a photo is chosen; the person always reviews and can change anything.
+    var touched = {};
+    [['amount', amount], ['date', date], ['cat', cat], ['desc', desc]].forEach(function (p) {
+      p[1].addEventListener('input', function () { touched[p[0]] = true; });
+      p[1].addEventListener('change', function () { touched[p[0]] = true; });
+    });
+    var scanNote = h('small', { class: 'muted scan-note', role: 'status' });
+    var scanSeq = 0;
+    var photo = h('input', { type: 'file', accept: 'image/*,application/pdf', onchange: async function () {
+      var file = photo.files && photo.files[0], seq = ++scanSeq;
+      scanNote.textContent = '';
+      if (!file || !/^image\//.test(file.type)) return;
+      scanNote.textContent = '✨ Reading your receipt…';
+      var out;
+      try { out = await readReceipt(file); } catch (e) { out = { error: 'unavailable' }; }
+      if (seq !== scanSeq) return; // a newer photo was chosen
+      if (out.quiet) { scanNote.textContent = ''; return; }
+      if (out.error === 'daily_limit') { scanNote.textContent = 'You’ve used today’s automatic readings. Please fill in the details below.'; return; }
+      if (out.error || !out.result) { scanNote.textContent = 'Couldn’t read this receipt automatically. No problem, just fill in the details below.'; return; }
+      var fill = L.receiptFill(out.result, touched, todayIso());
+      var n = Object.keys(fill).length;
+      if (!n) { scanNote.textContent = 'Couldn’t read this receipt clearly. Please fill in the details below.'; return; }
+      if (fill.amount) amount.value = fill.amount;
+      if (fill.date) date.value = fill.date;
+      if (fill.cat) cat.value = fill.cat;
+      if (fill.desc) desc.value = fill.desc;
+      updatePreview();
+      scanNote.textContent = '✨ Filled in from your receipt. Please check it before saving.';
+    } });
     var removeReceipt = existing && existing.receipt_path ? h('input', { type: 'checkbox' }) : null;
     var btn = h('button', { class: 'btn primary', type: 'submit' }, existing ? 'Save changes' : 'Add expense');
 
@@ -612,7 +667,8 @@
       field('Who paid?', paidBy),
       h('fieldset', { class: 'field' }, h('legend', null, 'Shared by'), shareBoxes.map(function (s) { return s.el; }), splitPreview),
       field(existing && existing.receipt_path ? 'Replace receipt photo' : 'Receipt photo (optional)', photo,
-        'Keep receipts for medical expenses: you may need them at tax time.'),
+        'Keep receipts for medical expenses: you may need them at tax time. We’ll try to fill in the details for you.'),
+      scanNote,
       removeReceipt ? h('label', { class: 'check' }, removeReceipt, ' Remove the current receipt') : null,
       h('div', { class: 'actions' }, btn, h('a', { class: 'btn', href: existing ? '#/f/' + f.id + '/e/' + existing.id : '#/f/' + f.id }, 'Cancel')));
 
